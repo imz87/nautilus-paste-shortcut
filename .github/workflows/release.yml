@@ -174,20 +174,68 @@ jobs:
           name: rpm-opensuse
           path: ~/rpmbuild/RPMS/noarch/nautilus-paste-shortcut-*.rpm
 
-  release:
-    name: Create release
+  sign-artifacts:
+    name: Sign release artifacts
     needs: [validate, source-tarball, build-rpm-fedora, build-deb-ubuntu, build-arch, build-rpm-opensuse]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: List artifacts
+      - name: Import GPG key
+        id: import-gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Sign source tarball
+        run: |
+          find artifacts/source-tarball -name "*.tar.gz" -exec gpg --batch --yes --detach-sign {} \;
+
+      - name: Sign Fedora RPM
+        run: |
+          find artifacts/rpm-fedora -name "*.rpm" -exec gpg --batch --yes --detach-sign {} \;
+
+      - name: Sign Ubuntu DEB
+        run: |
+          find artifacts/deb-ubuntu -name "*.deb" -exec gpg --batch --yes --detach-sign {} \;
+
+      - name: Sign Arch package
+        run: |
+          find artifacts/arch-package -name "*.pkg.tar.*" -exec gpg --batch --yes --detach-sign {} \;
+
+      - name: Sign openSUSE RPM
+        run: |
+          find artifacts/rpm-opensuse -name "*.rpm" -exec gpg --batch --yes --detach-sign {} \;
+
+      - name: Upload signed artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-artifacts
+          path: artifacts/**/*
+          if-no-files-found: error
+
+  release:
+    name: Create release
+    needs: [validate, sign-artifacts]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download signed artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          name: signed-artifacts
+
+      - name: List signed artifacts
         run: find artifacts -type f | sort
 
       - name: Create GitHub Release

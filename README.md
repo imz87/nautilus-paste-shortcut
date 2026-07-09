@@ -182,7 +182,39 @@ nautilus -q
 
 **Important:** Release artifacts are not the same as adding an apt/dnf/pacman/zypper repository. They do not provide automatic updates. You must download and install new versions manually from GitHub Releases.
 
-Package signing is deferred to a separate task. Current release artifacts are unsigned.
+### Package Signing
+
+Release artifacts are signed with GPG. Each package file includes a corresponding `.asc` signature file.
+
+**Verifying signatures:**
+
+Download both the package and its `.asc` signature file, then verify:
+
+Fedora/RHEL:
+```bash
+rpm --import nautilus-paste-shortcut-signing-key.asc
+rpm --checksig nautilus-paste-shortcut-*.rpm
+```
+
+Ubuntu/Debian:
+```bash
+gpg --verify nautilus-paste-shortcut_*.deb.asc nautilus-paste-shortcut_*.deb
+```
+
+Arch Linux:
+```bash
+gpg --verify nautilus-paste-shortcut-*.pkg.tar.zst.asc nautilus-paste-shortcut-*.pkg.tar.zst
+```
+
+openSUSE:
+```bash
+rpm --import nautilus-paste-shortcut-signing-key.asc
+rpm --checksig nautilus-paste-shortcut-*.rpm
+```
+
+**Signing key identity:** `Nautilus Paste Shortcut Release Signing <zolfaghari19@gmail.com>`
+
+See `.docs/project/packaging.md` for details on the signing strategy and key management.
 
 ## Usage
 

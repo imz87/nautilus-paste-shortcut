@@ -147,7 +147,60 @@ nautilus -q
 
 **GitHub Release artifacts are NOT the same as native package repositories.** They do not provide automatic updates. Users must download and install new versions manually from GitHub Releases.
 
-**Package signing is deferred to a separate task.** Current release artifacts are unsigned.
+**Release artifacts are signed.** Each package file includes a corresponding `.asc` signature file created with GPG.
+
+### Package Signing Strategy
+
+Release artifacts are signed in GitHub Actions using GPG. The signing process:
+
+1. **Signing identity:** `Nautilus Paste Shortcut Release Signing <zolfaghari19@gmail.com>`
+2. **Key management:** The GPG private key is stored as a GitHub Actions secret (`GPG_PRIVATE_KEY`) with an optional passphrase (`GPG_PASSPHRASE`).
+3. **Signing scope:** All release artifacts (RPM, DEB, Arch, source tarball) are signed with detached `.asc` signatures.
+4. **When signing occurs:** Only on tag-triggered releases (`v*` tags), not on pull requests or manual workflow dispatches.
+
+**Required GitHub Actions Secrets:**
+
+| Secret Name | Description |
+|---|---|
+| `GPG_PRIVATE_KEY` | ASCII-armored GPG private key for signing |
+| `GPG_PASSPHRASE` | Passphrase for the GPG key (can be empty) |
+
+**Signing artifacts in GitHub Actions:**
+
+```bash
+# Import the GPG key
+echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+
+# Sign a file with detached signature
+gpg --batch --yes --detach-sign package.rpm
+
+# This creates package.rpm.asc
+```
+
+**Signature verification:**
+
+Users can verify signatures using the public key:
+
+```bash
+# Import the public key (one-time setup)
+gpg --import nautilus-paste-shortcut-signing-key.asc
+
+# Verify a signature
+gpg --verify package.rpm.asc package.rpm
+```
+
+**Key rotation and revocation:**
+
+- Keys should be rotated annually or when a maintainer leaves.
+- Revoked keys should be added to public key servers.
+- New keys must be updated in the `GPG_PRIVATE_KEY` secret.
+
+**Security considerations:**
+
+- Private keys are never committed to the repository.
+- Signing occurs only in GitHub Actions, not locally.
+- The `GPG_PRIVATE_KEY` secret should be protected with branch protection rules.
+- Workflow logs should not print key material.
 
 ### Future Repository Publishing
 
@@ -158,7 +211,7 @@ Native package repository publishing is separate work:
 - **Arch family**: AUR package recipe (planned)
 - **openSUSE family**: OBS publishing (planned)
 
-Repository publishing requires package signing, credentials, and different automation than release artifact builds.
+Repository publishing requires package signing, credentials, and different automation than release artifact builds. The signing infrastructure established in this task enables future repository publishing.
 
 ## Non-Goals
 

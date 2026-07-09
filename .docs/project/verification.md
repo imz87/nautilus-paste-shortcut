@@ -118,6 +118,45 @@ act -l
 python3 -c "import yaml; yaml.safe_load(open('.github/workflows/release.yml'))"
 ```
 
+### Package Signature Verification
+
+Verify that release artifacts are signed correctly:
+
+```bash
+# Download a package and its .asc signature from GitHub Releases
+
+# Import the signing public key (one-time setup)
+gpg --import nautilus-paste-shortcut-signing-key.asc
+
+# Verify GPG signature
+gpg --verify package.rpm.asc package.rpm
+# or
+gpg --verify package.deb.asc package.deb
+# or
+gpg --verify package.pkg.tar.zst.asc package.pkg.tar.zst
+
+# Verify RPM signature (Fedora/openSUSE)
+rpm --checksig package.rpm
+
+# List signature details
+rpm -qip package.rpm | grep -i signature
+```
+
+**Expected output:**
+- `gpg: Good signature from "Nautilus Paste Shortcut Release Signing <zolfaghari19@gmail.com>"`
+- RPM: `package.rpm: digests SIGNATURE OK`
+
+**Troubleshooting:**
+
+```bash
+# If gpg reports "public key not found"
+gpg --keyserver keyserver.ubuntu.com --recv-keys <KEY_ID>
+
+# If RPM reports "NOT OK"
+rpm --import nautilus-paste-shortcut-signing-key.asc
+rpm --checksig package.rpm
+```
+
 ## Manual Checks
 
 1. Copy one file in GNOME Files and run `Paste Shortcut Here` in another folder.
