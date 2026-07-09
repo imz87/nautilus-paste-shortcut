@@ -18,6 +18,9 @@ DIALOG_TITLE = "Paste Shortcut Here"
 
 class PasteShortcutExtension(GObject.GObject, Nautilus.MenuProvider):
     def get_background_items(self, current_folder):
+        if not self._clipboard_has_copied_files():
+            return []
+
         item = Nautilus.MenuItem(
             name="PasteShortcutExtension::PasteShortcutHere",
             label=MENU_LABEL,
@@ -25,6 +28,15 @@ class PasteShortcutExtension(GObject.GObject, Nautilus.MenuProvider):
         )
         item.connect("activate", self._on_activate, current_folder.get_uri())
         return [item]
+
+    def _clipboard_has_copied_files(self):
+        display = Gdk.Display.get_default()
+        if display is None:
+            return False
+
+        clipboard = display.get_clipboard()
+        formats = clipboard.get_formats()
+        return formats.contain_mime_type(TARGET_MIME_TYPE)
 
     def _on_activate(self, _menu_item, destination_uri):
         display = Gdk.Display.get_default()

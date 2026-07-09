@@ -9,7 +9,8 @@ The extension reads Nautilus's copied-files clipboard payload after a normal `Ct
 - Supports multiple copied files and folders.
 - Uses the normal GNOME Files copy flow.
 - Creates symbolic links instead of duplicating file contents.
-- Shows a small error dialog for invalid clipboard cases.
+- Hides the menu item when the clipboard does not contain copied files.
+- Shows a small error dialog for invalid clipboard cases as a fallback.
 - Handles name collisions with `-link`, `-link-2`, and so on.
 
 ## Current Scope
@@ -60,9 +61,9 @@ Open GNOME Files again after that.
 2. Press `Ctrl+C`.
 3. Navigate to another local folder.
 4. Right-click empty space.
-5. Choose `Paste Shortcut Here`.
+5. Choose `Paste Shortcut Here` (only visible when the clipboard contains copied files).
 
-If the clipboard does not contain copied local files, the extension shows a small error dialog.
+If the clipboard does not contain copied local files, the menu item is hidden. An error dialog may still appear as a fallback if clipboard inspection fails.
 
 ## Uninstall
 
@@ -85,8 +86,8 @@ nautilus -q
 2. Copy one local folder and paste a shortcut into another folder.
 3. Copy multiple local items and verify one symlink is created per item.
 4. Repeat with a conflicting destination name and verify `-link` suffixes are used.
-5. Press `Ctrl+X` instead of `Ctrl+C` and verify an error dialog appears.
-6. Copy plain text from another app and verify an error dialog appears.
+5. Press `Ctrl+X` instead of `Ctrl+C` and verify the menu item is hidden.
+6. Copy plain text from another app and verify the menu item is hidden.
 
 ## License
 
