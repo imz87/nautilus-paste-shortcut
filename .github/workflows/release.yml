@@ -157,6 +157,11 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
+      - name: Install signing tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y devscripts
+
       - name: Sign source tarball
         run: |
           find artifacts/source-tarball -name "*.tar.gz" -exec gpg --batch --yes --detach-sign {} \;
@@ -167,7 +172,8 @@ jobs:
 
       - name: Sign Ubuntu source package
         run: |
-          find artifacts/source-package -name "*.changes" -exec gpg --batch --yes --detach-sign {} \;
+          cd artifacts/source-package
+          debsign --re-sign -k ${{ steps.import-gpg.outputs.keyid }} *.changes
 
       - name: Upload signed artifacts
         uses: actions/upload-artifact@v4
