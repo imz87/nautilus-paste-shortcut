@@ -35,6 +35,8 @@ Package names may vary slightly by Fedora release. `python3-nautilus` is the imp
 
 ## Install
 
+### Local Install
+
 From this repository:
 
 ```bash
@@ -54,6 +56,54 @@ nautilus -q
 ```
 
 Open GNOME Files again after that.
+
+### RPM Install
+
+Build and install a Fedora RPM:
+
+```bash
+# Install build tools
+sudo dnf install rpm-build rpmdevtools
+rpmdev-setuptree
+
+# Create source tarball
+git archive --format=tar.gz --prefix=nautilus-paste-shortcut-0.1.0/ \
+    HEAD -o ~/rpmbuild/SOURCES/nautilus-paste-shortcut-0.1.0.tar.gz
+
+# Build the RPM
+rpmbuild -ba packaging/nautilus-paste-shortcut.spec
+
+# Install the RPM
+sudo dnf install ~/rpmbuild/RPMS/noarch/nautilus-paste-shortcut-0.1.0-1.*.rpm
+```
+
+The RPM installs the extension to the system-wide path:
+
+```text
+/usr/share/nautilus-python/extensions/nautilus_paste_shortcut.py
+```
+
+After installation, restart Nautilus:
+
+```bash
+nautilus -q
+```
+
+### RPM Uninstall
+
+Remove the RPM package:
+
+```bash
+sudo dnf remove nautilus-paste-shortcut
+```
+
+After removal, restart Nautilus so the extension is no longer loaded:
+
+```bash
+nautilus -q
+```
+
+See `.docs/project/packaging.md` for more details on RPM and COPR distribution.
 
 ## Usage
 
@@ -78,6 +128,7 @@ nautilus -q
 
 - Source file: `src/nautilus_paste_shortcut.py`
 - Installer: `install.sh`
+- RPM packaging: `packaging/nautilus-paste-shortcut.spec`
 - Project docs: `.docs/`
 
 ## Manual Verification
