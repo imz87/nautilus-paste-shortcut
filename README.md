@@ -134,6 +134,22 @@ nautilus -q
 - RPM packaging: `packaging/nautilus-paste-shortcut.spec`
 - Project docs: `.docs/`
 
+## Testing
+
+Run the automated unit tests for the core shortcut logic:
+
+```bash
+python3 -m pytest tests/ -v
+```
+
+These tests cover:
+- clipboard payload parsing
+- link-name generation and collision handling
+- symlink creation in temporary directories
+- mixed supported/unsupported source URI handling
+
+The tests do **not** require a live GNOME session, Nautilus, or clipboard access. Desktop integration (context menu, clipboard, dialogs) still requires manual verification.
+
 ## Manual Verification
 
 1. Copy one local file and paste a shortcut into another folder.
