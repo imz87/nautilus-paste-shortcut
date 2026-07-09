@@ -221,8 +221,9 @@ jobs:
       - name: Build source package
         run: |
           VERSION="${{ needs.prepare-release.outputs.version }}"
+          SERIES="${{ github.event_name == 'workflow_dispatch' && inputs.target_series || 'noble' }}"
           cp -r packaging/debian debian
-          sed -i "1s/(0.1.0-1)/(${VERSION}-1)/" debian/changelog
+          sed -i "1s/^nautilus-paste-shortcut (.*/nautilus-paste-shortcut (${VERSION}-1) ${SERIES}; urgency=low/" debian/changelog
           dpkg-buildpackage -us -uc -S
           mv ../*.changes ../*.dsc ../*.debian.tar.* ../*.orig.tar.* ../*.tar.* ../*.buildinfo . 2>/dev/null || true
 
