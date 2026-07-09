@@ -350,10 +350,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download source package
+      - name: Download signed source package
         uses: actions/download-artifact@v4
         with:
-          name: source-package
+          name: signed-artifacts
+          path: artifacts
 
       - name: Import GPG key
         id: import-gpg
@@ -384,7 +385,7 @@ jobs:
           echo "Would publish to PPA: ${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa"
           echo "Target series: ${{ inputs.target_series || 'noble' }}"
           echo "Files to upload:"
-          ls -la *.changes *.dsc 2>/dev/null || echo "No source package files found"
+          ls -la artifacts/source-package/*.changes artifacts/source-package/*.dsc 2>/dev/null || echo "No source package files found"
           echo ""
           echo "=== DRY RUN COMPLETE ==="
 
@@ -393,7 +394,7 @@ jobs:
         run: |
           SERIES="${{ inputs.target_series || 'noble' }}"
           echo "Publishing to PPA for series: $SERIES"
-          dput ppa nautilus-paste-shortcut_*.changes
+          dput ppa artifacts/source-package/nautilus-paste-shortcut_*.changes
 
       - name: Verify publication
         if: inputs.dry_run != 'true'
