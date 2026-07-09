@@ -28,6 +28,96 @@ Each matrix job runs:
 
 CI success means the project passes automated static and unit checks in distro containers. It does **not** guarantee the Nautilus context menu appears on every desktop. Container CI cannot verify Wayland clipboard behavior or Nautilus menu integration.
 
+## Package Verification
+
+Use these commands to verify package metadata and build artifacts locally:
+
+### Version File
+
+```bash
+cat VERSION
+# Should output: 0.1.0
+```
+
+### RPM (Fedora)
+
+```bash
+# Install build tools
+sudo dnf install rpm-build rpmdevtools
+
+# Set up build tree
+rpmdev-setuptree
+
+# Create source tarball
+VERSION=$(cat VERSION)
+git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
+    HEAD -o ~/rpmbuild/SOURCES/nautilus-paste-shortcut-${VERSION}.tar.gz
+
+# Build RPM
+rpmbuild -ba packaging/nautilus-paste-shortcut.spec
+
+# Verify RPM contents
+rpm -qlp ~/rpmbuild/RPMS/noarch/nautilus-paste-shortcut-*.rpm
+```
+
+### DEB (Ubuntu/Debian)
+
+```bash
+# Install build tools
+sudo apt install debhelper python3-all dh-python
+
+# Build DEB
+dpkg-buildpackage -us -uc -b
+
+# Verify DEB contents
+dpkg-deb -c ../nautilus-paste-shortcut_*.deb
+```
+
+### Arch Linux
+
+```bash
+# Install build tools
+sudo pacman -S base-dependencies
+
+# Build package
+cd packaging/arch
+makepkg -s
+
+# Verify package contents
+tar -tf nautilus-paste-shortcut-*.pkg.tar.zst
+```
+
+### openSUSE
+
+```bash
+# Install build tools
+sudo zypper install rpm-build rpmdevtools python3-devel
+
+# Set up build tree
+rpmdev-setuptree
+
+# Create source tarball
+VERSION=$(cat VERSION)
+git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
+    HEAD -o ~/rpmbuild/SOURCES/nautilus-paste-shortcut-${VERSION}.tar.gz
+
+# Build RPM
+rpmbuild -ba packaging/opensuse/nautilus-paste-shortcut.spec
+
+# Verify RPM contents
+rpm -qlp ~/rpmbuild/RPMS/noarch/nautilus-paste-shortcut-*.rpm
+```
+
+### GitHub Actions Workflow
+
+```bash
+# Validate workflow syntax (requires act or similar tool)
+act -l
+
+# Or check YAML syntax
+python3 -c "import yaml; yaml.safe_load(open('.github/workflows/release.yml'))"
+```
+
 ## Manual Checks
 
 1. Copy one file in GNOME Files and run `Paste Shortcut Here` in another folder.

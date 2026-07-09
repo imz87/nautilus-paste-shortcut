@@ -143,6 +143,47 @@ nautilus -q
 
 See `.docs/project/packaging.md` for more details on RPM and COPR distribution.
 
+### Release Artifacts
+
+GitHub Releases provide pre-built packages for multiple distributions. These are downloadable installable artifacts, not native package repositories.
+
+**Available formats:**
+- **Fedora/RHEL**: `.rpm` package
+- **Ubuntu/Debian**: `.deb` package
+- **Arch Linux**: `.pkg.tar.zst` package
+- **openSUSE**: `.rpm` package
+
+**Installation from release artifacts:**
+
+Fedora/RHEL:
+```bash
+sudo dnf install ./nautilus-paste-shortcut-*.rpm
+```
+
+Ubuntu/Debian:
+```bash
+sudo apt install ./nautilus-paste-shortcut_*.deb
+```
+
+Arch Linux:
+```bash
+sudo pacman -U nautilus-paste-shortcut-*.pkg.tar.zst
+```
+
+openSUSE:
+```bash
+sudo zypper install ./nautilus-paste-shortcut-*.rpm
+```
+
+After installation, restart Nautilus:
+```bash
+nautilus -q
+```
+
+**Important:** Release artifacts are not the same as adding an apt/dnf/pacman/zypper repository. They do not provide automatic updates. You must download and install new versions manually from GitHub Releases.
+
+Package signing is deferred to a separate task. Current release artifacts are unsigned.
+
 ## Usage
 
 1. In GNOME Files, select one or more files or folders.

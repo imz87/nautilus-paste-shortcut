@@ -1,0 +1,202 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version file
+        id: version
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "VERSION file: $VERSION"
+
+      - name: Validate tag matches version (tag-triggered only)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "::error::Git tag ($TAG) does not match VERSION file ($VERSION)"
+            exit 1
+          fi
+          echo "Tag $TAG matches VERSION file"
+
+  source-tarball:
+    name: Build source tarball
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create source tarball
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
+              HEAD -o "nautilus-paste-shortcut-${VERSION}.tar.gz"
+
+      - name: Upload source tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-tarball
+          path: nautilus-paste-shortcut-*.tar.gz
+
+  build-rpm-fedora:
+    name: Build RPM (Fedora)
+    needs: [validate, source-tarball]
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          dnf install -y rpm-build rpmdevtools python3-devel
+
+      - name: Set up RPM build tree
+        run: rpmdev-setuptree
+
+      - name: Create source tarball
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
+              HEAD -o ~/rpmbuild/SOURCES/nautilus-paste-shortcut-${VERSION}.tar.gz
+
+      - name: Build RPM
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          rpmbuild -ba packaging/nautilus-paste-shortcut.spec
+
+      - name: Upload RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-fedora
+          path: ~/rpmbuild/RPMS/noarch/nautilus-paste-shortcut-*.rpm
+
+  build-deb-ubuntu:
+    name: Build DEB (Ubuntu)
+    needs: [validate, source-tarball]
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y debhelper python3-all dh-python
+
+      - name: Build DEB
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          dpkg-buildpackage -us -uc -b
+
+      - name: Upload DEB
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-ubuntu
+          path: ../nautilus-paste-shortcut_*.deb
+
+  build-arch:
+    name: Build Arch package
+    needs: [validate, source-tarball]
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          pacman -Sy --noconfirm base-devel
+
+      - name: Build Arch package
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          cd packaging/arch
+          makepkg -s --noconfirm
+
+      - name: Upload Arch package
+        uses: actions/upload-artifact@v4
+        with:
+          name: arch-package
+          path: packaging/arch/nautilus-paste-shortcut-*.pkg.tar.*
+
+  build-rpm-opensuse:
+    name: Build RPM (openSUSE)
+    needs: [validate, source-tarball]
+    runs-on: ubuntu-latest
+    container:
+      image: opensuse/tumbleweed:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          zypper --non-interactive install rpm-build rpmdevtools python3-devel
+
+      - name: Set up RPM build tree
+        run: rpmdev-setuptree
+
+      - name: Create source tarball
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
+              HEAD -o ~/rpmbuild/SOURCES/nautilus-paste-shortcut-${VERSION}.tar.gz
+
+      - name: Build RPM
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          rpmbuild -ba packaging/opensuse/nautilus-paste-shortcut.spec
+
+      - name: Upload RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-opensuse
+          path: ~/rpmbuild/RPMS/noarch/nautilus-paste-shortcut-*.rpm
+
+  release:
+    name: Create release
+    needs: [validate, source-tarball, build-rpm-fedora, build-deb-ubuntu, build-arch, build-rpm-opensuse]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f | sort
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/source-tarball/*
+            artifacts/rpm-fedora/*
+            artifacts/deb-ubuntu/*
+            artifacts/arch-package/*
+            artifacts/rpm-opensuse/*
+          generate_release_notes: true

@@ -86,6 +86,80 @@ The local installer (`install.sh`) works on any Linux distribution with a compat
 
 Package names vary by distribution. The `nautilus-python` package (or equivalent) must provide `libnautilus-python.so`. See `README.md` for distro-specific install commands.
 
+## Release Artifact Packaging
+
+GitHub Actions can build package artifacts and attach them to GitHub Releases. This provides downloadable installable packages for multiple distributions.
+
+### Version File
+
+The repository uses a `VERSION` file as the single source of truth for package versions. The release workflow reads this file and validates it against Git tags when triggered by version tags.
+
+```bash
+cat VERSION
+# Output: 0.1.0
+```
+
+### Build Artifacts
+
+The release workflow builds these package formats:
+
+| Distribution | Format | Build Container |
+|---|---|---|
+| Fedora/RHEL | `.rpm` | `fedora:latest` |
+| Ubuntu/Debian | `.deb` | `ubuntu:24.04` |
+| Arch Linux | `.pkg.tar.zst` | `archlinux:latest` |
+| openSUSE | `.rpm` | `opensuse/tumbleweed:latest` |
+
+### Packaging Files
+
+- **Fedora**: `packaging/nautilus-paste-shortcut.spec`
+- **Ubuntu/Debian**: `packaging/debian/`
+- **Arch Linux**: `packaging/arch/PKGBUILD`
+- **openSUSE**: `packaging/opensuse/nautilus-paste-shortcut.spec`
+
+### Installation from Release Artifacts
+
+Fedora/RHEL:
+```bash
+sudo dnf install ./nautilus-paste-shortcut-*.rpm
+nautilus -q
+```
+
+Ubuntu/Debian:
+```bash
+sudo apt install ./nautilus-paste-shortcut_*.deb
+nautilus -q
+```
+
+Arch Linux:
+```bash
+sudo pacman -U nautilus-paste-shortcut-*.pkg.tar.zst
+nautilus -q
+```
+
+openSUSE:
+```bash
+sudo zypper install ./nautilus-paste-shortcut-*.rpm
+nautilus -q
+```
+
+### Important Distinctions
+
+**GitHub Release artifacts are NOT the same as native package repositories.** They do not provide automatic updates. Users must download and install new versions manually from GitHub Releases.
+
+**Package signing is deferred to a separate task.** Current release artifacts are unsigned.
+
+### Future Repository Publishing
+
+Native package repository publishing is separate work:
+
+- **Fedora/RHEL family**: COPR repository (planned)
+- **Debian/Ubuntu family**: PPA or apt repository (planned)
+- **Arch family**: AUR package recipe (planned)
+- **openSUSE family**: OBS publishing (planned)
+
+Repository publishing requires package signing, credentials, and different automation than release artifact builds.
+
 ## Non-Goals
 
 - This project is not a GNOME Shell extension.
