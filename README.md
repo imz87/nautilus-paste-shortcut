@@ -1,5 +1,7 @@
 # Nautilus Paste Shortcut
 
+[![CI](https://github.com/imz87/nautilus-paste-shortcut/actions/workflows/ci.yml/badge.svg)](https://github.com/imz87/nautilus-paste-shortcut/actions/workflows/ci.yml)
+
 Add a `Paste Shortcut Here` action to GNOME Files on Fedora and other Nautilus-based desktops.
 
 The extension reads Nautilus's copied-files clipboard payload after a normal `Ctrl+C` and creates symbolic links in the folder you right-clicked.
@@ -22,6 +24,20 @@ The extension reads Nautilus's copied-files clipboard payload after a normal `Ct
   - `Ctrl+X` / cut clipboard entries
   - remote URIs such as `sftp://`, `smb://`, and `trash://`
   - GNOME Shell integration
+
+## CI and Tested Distributions
+
+GitHub Actions CI runs automated checks across five distributions:
+
+| Distribution | Container Image |
+|---|---|
+| Fedora (latest) | `fedora:latest` |
+| Ubuntu (latest LTS) | `ubuntu:24.04` |
+| Debian (stable) | `debian:bookworm` |
+| Arch Linux (latest) | `archlinux:latest` |
+| openSUSE Tumbleweed | `opensuse/tumbleweed:latest` |
+
+CI verifies Python syntax, shell script syntax, and pure unit tests in each container. Container CI does **not** replace manual Nautilus desktop verification. The Nautilus context menu, clipboard integration, and Wayland behavior still require a real desktop session.
 
 ## Dependencies
 

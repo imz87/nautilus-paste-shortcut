@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    name: ${{ matrix.distro }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: Fedora (latest)
+            image: fedora:latest
+          - distro: Ubuntu (latest LTS)
+            image: ubuntu:24.04
+          - distro: Debian (stable)
+            image: debian:bookworm
+          - distro: Arch Linux (latest)
+            image: archlinux:latest
+          - distro: openSUSE (Tumbleweed)
+            image: opensuse/tumbleweed:latest
+
+    container:
+      image: ${{ matrix.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # -- Fedora ---------------------------------------------------------
+      - name: Install packages (Fedora)
+        if: startsWith(matrix.image, 'fedora')
+        run: |
+          dnf install -y \
+            python3 python3-pip \
+            python3-gobject gobject-introspection \
+            gtk4 nautilus-python python3-nautilus \
+            pytest
+
+      # -- Ubuntu / Debian ------------------------------------------------
+      - name: Install packages (Ubuntu/Debian)
+        if: startsWith(matrix.image, 'ubuntu') || startsWith(matrix.image, 'debian')
+        run: |
+          apt-get update
+          apt-get install -y \
+            python3 python3-pip \
+            python3-gi gir1.2-gtk-4.0 \
+            python3-nautilus gir1.2-nautilus-4.0 \
+            python3-pytest
+
+      # -- Arch Linux -----------------------------------------------------
+      - name: Install packages (Arch Linux)
+        if: startsWith(matrix.image, 'archlinux')
+        run: |
+          pacman -Sy --noconfirm \
+            python python-gobject gobject-introspection \
+            gtk4 nautilus python-nautilus \
+            python-pytest
+
+      # -- openSUSE Tumbleweed --------------------------------------------
+      - name: Install packages (openSUSE)
+        if: startsWith(matrix.image, 'opensuse')
+        run: |
+          zypper --non-interactive install \
+            python3 python3-pip \
+            python3-gobject gobject-introspection \
+            gtk4 nautilus-python python3-nautilus \
+            python3-pytest
+
+      # -- Checks ---------------------------------------------------------
+      - name: Shell syntax check
+        run: bash -n install.sh
+
+      - name: Check Nautilus typelib availability
+        id: typelib
+        run: |
+          if python3 -c "import gi; gi.require_version('Nautilus', '4.0')" 2>/dev/null; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Nautilus typelib not available in this container; skipping py_compile for nautilus_paste_shortcut.py"
+          fi
+
+      - name: Python syntax check (nautilus_paste_shortcut.py)
+        if: steps.typelib.outputs.available == 'true'
+        run: python3 -m py_compile src/nautilus_paste_shortcut.py
+
+      - name: Run unit tests
+        run: python3 -m pytest tests/ -v
