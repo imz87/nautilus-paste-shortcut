@@ -373,7 +373,7 @@ jobs:
         run: |
           cat > ~/.dput.cf << 'EOF'
           [ppa]
-          login = ${{ secrets.PPA_LAUNCHPAD_USERNAME }}
+          login = anonymous
           method = ftp
           host = ppa.launchpad.net
           incoming = ~${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa/ubuntu
