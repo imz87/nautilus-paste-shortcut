@@ -70,12 +70,18 @@ jobs:
           cp -r packaging/debian debian
           sed -i "1s/(0.1.0-1)/(${VERSION}-1)/" debian/changelog
           dpkg-buildpackage -us -uc -S
+          # Move build artifacts to workspace root for upload
+          mv ../*.changes ../*.dsc ../*.debian.tar.* ../*.orig.tar.* . 2>/dev/null || true
 
       - name: Upload source package
         uses: actions/upload-artifact@v4
         with:
           name: source-package
-          path: ../nautilus-paste-shortcut_*.changes
+          path: |
+            *.changes
+            *.dsc
+            *.debian.tar.*
+            *.orig.tar.*
 
   publish-ppa:
     name: Publish to PPA
