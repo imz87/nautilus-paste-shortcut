@@ -6,14 +6,14 @@ Add a small automated test suite for the extension's pure logic and local filesy
 
 The repository currently relies on focused manual verification for Nautilus and clipboard behavior, but it does not have automated tests. The current implementation keeps both Nautilus integration and pure logic in `src/nautilus_paste_shortcut.py`, which makes low-level behavior harder to test in isolation.
 
-This project depends mainly on system packages such as PyGObject and Nautilus Python bindings. A normal runtime `requirements.txt` is not a good fit for those dependencies. For this task, keep runtime installation unchanged and add only the minimum developer-oriented test setup needed to run unit tests.
+This project depends mainly on system packages such as PyGObject and Nautilus Python bindings. A normal runtime `requirements.txt` is not a good fit for those dependencies. This task should be started only after `004-extract-core-logic-from-nautilus-entrypoint.md` is complete so the pure logic is available behind a normal Python import boundary. Keep runtime installation unchanged and add only the minimum developer-oriented test setup needed to run unit tests.
 
 # Files Expected To Change
 
 - `src/nautilus_paste_shortcut.py`
-  - Likely needs a small restructuring so clipboard payload parsing, link naming, and symlink-creation workflow can be tested without requiring a live Nautilus session.
+  - May need only minimal follow-up adjustments after task 004 so clipboard payload parsing, link naming, and symlink-creation workflow are exercised through the extracted core logic without requiring a live Nautilus session.
 - Optional new helper module under `src/`
-  - If needed, extract pure logic into a small helper module that does not import GTK, GDK, or Nautilus at import time.
+  - Reuse the helper introduced by task 004; only extend it if the coding agent finds a small remaining testability gap.
 - `tests/test_core_logic.py`
   - Add pytest coverage for payload parsing, link naming, collision handling, and local-only shortcut creation behavior.
 - `README.md`
@@ -40,7 +40,7 @@ This project depends mainly on system packages such as PyGObject and Nautilus Py
 
 # Implementation Steps
 
-1. Identify the smallest set of pure functions or helper methods that can be tested without importing live GTK/Nautilus objects.
+1. Confirm that task 004's extracted core module is available and identify the smallest public surface needed for unit testing.
 2. Restructure only as much as needed so those logic paths can be imported and tested in a normal pytest run.
 3. Add pytest tests for clipboard payload parsing, including blank-line handling, empty payload rejection, and `copy` vs `cut` operation parsing.
 4. Add pytest tests for link-name generation, including plain filenames, no-extension names, hidden-file edge cases, and multi-dot filenames.
@@ -75,7 +75,7 @@ This project depends mainly on system packages such as PyGObject and Nautilus Py
 
 # Risks
 
-- Top-level `gi` / Nautilus imports may make test execution awkward unless the pure logic is isolated carefully.
+- If task 004 leaves small pieces of pure logic behind the Nautilus import boundary, the testing task may still need minor follow-up extraction work.
 - Hidden-file naming behavior such as `.bashrc` may expose edge cases that the current implementation already has; tests should capture current intended behavior before changing it.
 - Over-refactoring for testability could accidentally change user-visible Nautilus behavior if the integration boundary is not preserved.
 
