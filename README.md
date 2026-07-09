@@ -216,6 +216,35 @@ rpm --checksig nautilus-paste-shortcut-*.rpm
 
 See `.docs/project/packaging.md` for details on the signing strategy and key management.
 
+### PPA/apt Repository (Ubuntu/Debian)
+
+For Ubuntu and Debian users, the extension is available through a PPA repository with automatic updates.
+
+**Installation from PPA:**
+
+```bash
+sudo add-apt-repository ppa:imz87/nautilus-paste-shortcut
+sudo apt update
+sudo apt install nautilus-paste-shortcut
+```
+
+After installation, restart Nautilus:
+```bash
+nautilus -q
+```
+
+**Uninstalling from PPA:**
+
+```bash
+sudo apt remove nautilus-paste-shortcut
+sudo add-apt-repository --remove ppa:imz87/nautilus-paste-shortcut
+nautilus -q
+```
+
+**Note:** The PPA provides automatic updates through `apt`. This is different from manually downloading release artifacts from GitHub Releases.
+
+See `.docs/project/packaging.md` for details on PPA publishing and maintenance.
+
 ## Usage
 
 1. In GNOME Files, select one or more files or folders.

@@ -213,6 +213,95 @@ Native package repository publishing is separate work:
 
 Repository publishing requires package signing, credentials, and different automation than release artifact builds. The signing infrastructure established in this task enables future repository publishing.
 
+## PPA/apt Repository Publishing
+
+The first native repository target is PPA for Debian/Ubuntu-family distribution. This provides automatic updates through `apt` rather than manual downloads from GitHub Releases.
+
+### PPA Publishing Strategy
+
+**Repository:** `ppa:imz87/nautilus-paste-shortcut`
+
+**Target distributions:**
+- Ubuntu Noble (24.04 LTS) - primary target
+- Ubuntu Jammy (22.04 LTS) - LTS support
+- Debian Bookworm - stable support
+
+**Publishing workflow:** `.github/workflows/publish-ppa.yml`
+
+**Required GitHub Actions Secrets:**
+
+| Secret Name | Description |
+|---|---|
+| `PPA_LAUNCHPAD_USERNAME` | Launchpad username for PPA access |
+| `PPA_GPG_PRIVATE_KEY` | GPG private key for package signing |
+| `PPA_GPG_PASSPHRASE` | Passphrase for the GPG key (can be empty) |
+
+**Required GitHub Environment:**
+
+| Environment Name | Description |
+|---|---|
+| `ppa-publish` | Protected environment for PPA publication |
+
+### PPA Setup Requirements
+
+1. **Launchpad account:** Create an account at `launchpad.net`
+2. **PPA creation:** Create a PPA in Launchpad settings
+3. **GPG key:** Generate a GPG key for package signing
+4. **GitHub secrets:** Configure the required secrets and environment
+
+### PPA Publishing Workflow
+
+The workflow runs on:
+- **Tag pushes** (`v*` tags) - automatic publication
+- **Manual dispatch** - with dry-run option
+
+**Workflow steps:**
+1. Validate version and signing prerequisites
+2. Build source package using `dpkg-buildpackage -S`
+3. Import GPG key from secrets
+4. Upload to PPA using `dput`
+
+**Safety features:**
+- Requires GitHub Environment approval (`ppa-publish`)
+- Dry-run mode for testing
+- Tag validation against VERSION file
+- GPG signing for package authenticity
+
+### PPA Installation
+
+Users can install from the PPA:
+
+```bash
+sudo add-apt-repository ppa:imz87/nautilus-paste-shortcut
+sudo apt update
+sudo apt install nautilus-paste-shortcut
+```
+
+### PPA Maintenance
+
+- **Version updates:** Update `VERSION` file and create a new tag
+- **Signing key rotation:** Update `PPA_GPG_PRIVATE_KEY` secret
+- **Series updates:** Modify workflow `target_series` input
+- **Monitoring:** Check Launchpad build logs for issues
+
+### PPA vs Release Artifacts
+
+| Feature | PPA Repository | GitHub Releases |
+|---|---|---|
+| Installation method | `apt install` | Manual download + `apt install ./package.deb` |
+| Automatic updates | Yes | No |
+| Update mechanism | `apt update && apt upgrade` | Download new version manually |
+| Trust model | Launchpad infrastructure | GitHub Release signatures |
+| Supported distros | Ubuntu/Debian | Multiple distros |
+
+### Future Repository Targets
+
+- **Fedora/RHEL family**: COPR repository (planned)
+- **Arch family**: AUR package recipe (planned)
+- **openSUSE family**: OBS publishing (planned)
+
+Each ecosystem has different credentials, review expectations, metadata rules, and automation constraints. The PPA publishing infrastructure serves as a template for future repository targets.
+
 ## Non-Goals
 
 - This project is not a GNOME Shell extension.

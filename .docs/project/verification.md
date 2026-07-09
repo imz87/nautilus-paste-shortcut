@@ -157,6 +157,50 @@ rpm --import nautilus-paste-shortcut-signing-key.asc
 rpm --checksig package.rpm
 ```
 
+### PPA/apt Repository Verification
+
+Verify PPA publication and installation:
+
+```bash
+# Check if PPA is configured
+apt-cache policy nautilus-paste-shortcut
+
+# Verify package version from PPA
+apt-cache show nautilus-paste-shortcut | grep Version
+
+# Test PPA publication (dry run)
+# This is done in the workflow - verify locally:
+dpkg-buildpackage -us -uc -S
+dput --dry-run ppa nautilus-paste-shortcut_*.changes
+
+# Verify package installation from PPA
+sudo add-apt-repository ppa:imz87/nautilus-paste-shortcut
+sudo apt update
+apt-cache policy nautilus-paste-shortcut
+
+# Check package signatures from PPA
+apt-key list | grep -A5 "nautilus-paste-shortcut"
+```
+
+**Expected output:**
+- Package version should match VERSION file
+- PPA should be listed in `apt-cache policy`
+- Package should be installable via `apt install`
+
+**Troubleshooting:**
+
+```bash
+# If PPA is not found
+sudo add-apt-repository --remove ppa:imz87/nautilus-paste-shortcut
+sudo add-apt-repository ppa:imz87/nautilus-paste-shortcut
+
+# If package signature verification fails
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys <KEY_ID>
+
+# If version mismatch
+cat VERSION  # Should match PPA version
+```
+
 ## Manual Checks
 
 1. Copy one file in GNOME Files and run `Paste Shortcut Here` in another folder.
