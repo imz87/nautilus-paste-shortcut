@@ -1,5 +1,5 @@
 Name:           nautilus-paste-shortcut
-Version:        0.1.0
+Version:        0.1.3
 Release:        1%{?dist}
 Summary:        Add Paste Shortcut Here action to GNOME Files
 License:        MIT
@@ -8,7 +8,6 @@ Source0:        %{name}-%{version}.tar.gz
 BuildArch:      noarch
 
 BuildRequires:  python3-devel
-Requires:       python3-nautilus
 Requires:       nautilus-python
 Requires:       python3-gobject
 Requires:       gtk4

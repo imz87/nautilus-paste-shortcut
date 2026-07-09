@@ -66,16 +66,16 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          dnf install -y git rpm-build rpmdevtools python3-devel
+          dnf install -y rpm-build rpmdevtools python3-devel
 
       - name: Set up RPM build tree
         run: rpmdev-setuptree
 
-      - name: Create source tarball
-        run: |
-          VERSION="${{ needs.validate.outputs.version }}"
-          git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
-              HEAD -o ~/rpmbuild/SOURCES/nautilus-paste-shortcut-${VERSION}.tar.gz
+      - name: Download source tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: source-tarball
+          path: ~/rpmbuild/SOURCES/
 
       - name: Build RPM
         run: |
@@ -89,102 +89,9 @@ jobs:
           name: rpm-fedora
           path: ~/rpmbuild/RPMS/noarch/nautilus-paste-shortcut-*.rpm
 
-  build-deb-ubuntu:
-    name: Build DEB (Ubuntu)
-    needs: [validate, source-tarball]
-    runs-on: ubuntu-latest
-    container:
-      image: ubuntu:24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install build dependencies
-        run: |
-          apt-get update
-          apt-get install -y debhelper python3-all dh-python
-
-      - name: Build DEB
-        run: |
-          VERSION="${{ needs.validate.outputs.version }}"
-          cp -r packaging/debian debian
-          sed -i "1s/(0.1.0-1)/(${VERSION}-1)/" debian/changelog
-          dpkg-buildpackage -us -uc -b
-
-      - name: Upload DEB
-        uses: actions/upload-artifact@v4
-        with:
-          name: deb-ubuntu
-          path: ../nautilus-paste-shortcut_*.deb
-
-  build-arch:
-    name: Build Arch package
-    needs: [validate, source-tarball]
-    runs-on: ubuntu-latest
-    container:
-      image: archlinux:latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install build dependencies
-        run: |
-          pacman -Sy --noconfirm git base-devel
-          useradd -m builder
-          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-
-      - name: Build Arch package
-        run: |
-          VERSION="${{ needs.validate.outputs.version }}"
-          git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
-              HEAD -o "packaging/arch/nautilus-paste-shortcut-${VERSION}.tar.gz"
-          chown -R builder:builder packaging/arch
-          su -c "cd packaging/arch && makepkg -s --noconfirm --skippgpcheck" builder
-
-      - name: Upload Arch package
-        uses: actions/upload-artifact@v4
-        with:
-          name: arch-package
-          path: packaging/arch/nautilus-paste-shortcut-*.pkg.tar.*
-
-  build-rpm-opensuse:
-    name: Build RPM (openSUSE)
-    needs: [validate, source-tarball]
-    runs-on: ubuntu-latest
-    container:
-      image: opensuse/tumbleweed:latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install build dependencies
-        run: |
-          zypper --non-interactive install git rpm-build rpmdevtools python3-devel
-
-      - name: Set up RPM build tree
-        run: rpmdev-setuptree
-
-      - name: Create source tarball
-        run: |
-          VERSION="${{ needs.validate.outputs.version }}"
-          git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
-              HEAD -o ~/rpmbuild/SOURCES/nautilus-paste-shortcut-${VERSION}.tar.gz
-
-      - name: Build RPM
-        run: |
-          VERSION="${{ needs.validate.outputs.version }}"
-          sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/opensuse/nautilus-paste-shortcut.spec
-          rpmbuild -ba packaging/opensuse/nautilus-paste-shortcut.spec
-
-      - name: Upload RPM
-        uses: actions/upload-artifact@v4
-        with:
-          name: rpm-opensuse
-          path: ~/rpmbuild/RPMS/noarch/nautilus-paste-shortcut-*.rpm
-
   sign-artifacts:
     name: Sign release artifacts
-    needs: [validate, source-tarball, build-rpm-fedora, build-deb-ubuntu, build-arch, build-rpm-opensuse]
+    needs: [validate, source-tarball, build-rpm-fedora]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
@@ -210,18 +117,6 @@ jobs:
         run: |
           find artifacts/rpm-fedora -name "*.rpm" -exec gpg --batch --yes --detach-sign {} \;
 
-      - name: Sign Ubuntu DEB
-        run: |
-          find artifacts/deb-ubuntu -name "*.deb" -exec gpg --batch --yes --detach-sign {} \;
-
-      - name: Sign Arch package
-        run: |
-          find artifacts/arch-package -name "*.pkg.tar.*" -exec gpg --batch --yes --detach-sign {} \;
-
-      - name: Sign openSUSE RPM
-        run: |
-          find artifacts/rpm-opensuse -name "*.rpm" -exec gpg --batch --yes --detach-sign {} \;
-
       - name: Upload signed artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -229,9 +124,6 @@ jobs:
           path: |
             artifacts/source-tarball/
             artifacts/rpm-fedora/
-            artifacts/deb-ubuntu/
-            artifacts/arch-package/
-            artifacts/rpm-opensuse/
           if-no-files-found: error
 
   release:
@@ -257,7 +149,4 @@ jobs:
           files: |
             artifacts/source-tarball/*
             artifacts/rpm-fedora/*
-            artifacts/deb-ubuntu/*
-            artifacts/arch-package/*
-            artifacts/rpm-opensuse/*
           generate_release_notes: true
