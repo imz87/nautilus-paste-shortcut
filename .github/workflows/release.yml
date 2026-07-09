@@ -125,7 +125,7 @@ jobs:
           sed -i "1s/(0.1.0-1)/(${VERSION}-1)/" debian/changelog
           dpkg-buildpackage -us -uc -S
           # Move build artifacts to workspace root for upload
-          mv ../*.changes ../*.dsc ../*.debian.tar.* ../*.orig.tar.* . 2>/dev/null || true
+          mv ../*.changes ../*.dsc ../*.debian.tar.* ../*.orig.tar.* ../*.buildinfo . 2>/dev/null || true
 
       - name: Upload source package
         uses: actions/upload-artifact@v4
@@ -136,6 +136,7 @@ jobs:
             *.dsc
             *.debian.tar.*
             *.orig.tar.*
+            *.buildinfo
 
   sign-artifacts:
     name: Sign release artifacts
