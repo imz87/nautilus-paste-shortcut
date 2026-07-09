@@ -67,6 +67,8 @@ jobs:
       - name: Build source package
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
+          cp -r packaging/debian debian
+          sed -i "1s/(0.1.0-1)/(${VERSION}-1)/" debian/changelog
           dpkg-buildpackage -us -uc -S
 
       - name: Upload source package

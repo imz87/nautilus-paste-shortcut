@@ -66,7 +66,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          dnf install -y rpm-build rpmdevtools python3-devel
+          dnf install -y git rpm-build rpmdevtools python3-devel
 
       - name: Set up RPM build tree
         run: rpmdev-setuptree
@@ -80,6 +80,7 @@ jobs:
       - name: Build RPM
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
+          sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/nautilus-paste-shortcut.spec
           rpmbuild -ba packaging/nautilus-paste-shortcut.spec
 
       - name: Upload RPM
@@ -107,6 +108,7 @@ jobs:
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
           cp -r packaging/debian debian
+          sed -i "1s/(0.1.0-1)/(${VERSION}-1)/" debian/changelog
           dpkg-buildpackage -us -uc -b
 
       - name: Upload DEB
@@ -127,7 +129,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          pacman -Sy --noconfirm base-devel
+          pacman -Sy --noconfirm git base-devel
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
@@ -157,7 +159,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          zypper --non-interactive install rpm-build rpmdevtools python3-devel
+          zypper --non-interactive install git rpm-build rpmdevtools python3-devel
 
       - name: Set up RPM build tree
         run: rpmdev-setuptree
@@ -171,6 +173,7 @@ jobs:
       - name: Build RPM
         run: |
           VERSION="${{ needs.validate.outputs.version }}"
+          sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/opensuse/nautilus-paste-shortcut.spec
           rpmbuild -ba packaging/opensuse/nautilus-paste-shortcut.spec
 
       - name: Upload RPM
