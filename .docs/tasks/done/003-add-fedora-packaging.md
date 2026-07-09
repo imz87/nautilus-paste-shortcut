@@ -20,9 +20,9 @@ The project can already be installed locally with `install.sh`, but publishing f
 
 # Acceptance Criteria
 
-- [ ] The repository contains basic Fedora packaging assets.
-- [ ] README documents the packaged installation path and dependencies.
-- [ ] Packaging docs explain local RPM or COPR distribution intent.
+- [x] The repository contains basic Fedora packaging assets.
+- [x] README documents the packaged installation path and dependencies.
+- [x] Packaging docs explain local RPM or COPR distribution intent.
 
 # Out Of Scope
 
@@ -40,3 +40,10 @@ The project can already be installed locally with `install.sh`, but publishing f
 # Commit Message
 
 Add Fedora packaging assets
+
+# Completion
+
+- **Review verdict:** Approve
+- **Summary:** Added RPM spec file, documented build/install/uninstall workflow in README and packaging docs, used `git archive` for clean source archives, documented restart guidance for both install and removal.
+- **Verification:** `python3 -m py_compile src/nautilus_paste_shortcut.py src/core_logic.py`, `bash -n install.sh`, `rpmspec -q --parse packaging/nautilus-paste-shortcut.spec`
+- **Residual risks:** None. Packaging paths may vary slightly by Fedora release.

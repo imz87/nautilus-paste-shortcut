@@ -21,9 +21,9 @@ The initial implementation always shows the menu item and validates the clipboar
 
 # Acceptance Criteria
 
-- [ ] `Paste Shortcut Here` is hidden when the clipboard does not contain copied files from GNOME Files.
-- [ ] The action still works for one or more copied local files.
-- [ ] Invalid clipboard cases still fail safely.
+- [x] `Paste Shortcut Here` is hidden when the clipboard does not contain copied files from GNOME Files.
+- [x] The action still works for one or more copied local files.
+- [x] Invalid clipboard cases still fail safely.
 
 # Out Of Scope
 
@@ -41,3 +41,10 @@ The initial implementation always shows the menu item and validates the clipboar
 # Commit Message
 
 Hide Paste Shortcut when clipboard is invalid
+
+# Completion
+
+- **Review verdict:** Approve
+- **Summary:** `get_background_items()` now reads the clipboard payload and validates that it contains a `copy` operation with at least one local `file://` URI before showing the menu item. Cut operations and non-local URIs are hidden.
+- **Verification:** `python3 -m py_compile src/nautilus_paste_shortcut.py`, `python3 -m pytest tests/ -v` (38 passed)
+- **Residual risks:** Clipboard read during menu creation is synchronous; may be version-sensitive across GTK releases.

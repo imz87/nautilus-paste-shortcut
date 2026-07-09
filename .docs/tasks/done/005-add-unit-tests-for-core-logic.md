@@ -51,19 +51,19 @@ This project depends mainly on system packages such as PyGObject and Nautilus Py
 
 # Acceptance Criteria
 
-- [ ] The repository contains an automated test file for the extension's pure logic and local filesystem behavior.
-- [ ] The automated tests do not depend on launching Nautilus, opening GTK dialogs, or accessing a live desktop clipboard.
-- [ ] Clipboard payload parsing is covered for valid copy payloads, blank lines, empty payloads, and cut payloads.
-- [ ] Link-name generation is covered for conflict-free names and deterministic `-link` suffix collisions.
-- [ ] Shortcut creation behavior is covered for local file and folder sources in temporary directories.
-- [ ] Mixed supported and unsupported source URIs are covered, including the returned warning message behavior.
-- [ ] `README.md` explains how to run the tests and clearly states that desktop integration still requires manual verification.
-- [ ] No runtime `requirements.txt` is introduced for Nautilus or PyGObject dependencies unless the user explicitly asks for packaging changes.
-- [ ] No behavior changes except those explicitly requested in this task.
-- [ ] No new background services or desktop hooks unless explicitly requested.
-- [ ] No packaging-system expansion unless explicitly requested.
-- [ ] No clipboard-format changes unless explicitly requested.
-- [ ] No environment or secret-handling changes unless explicitly requested.
+- [x] The repository contains an automated test file for the extension's pure logic and local filesystem behavior.
+- [x] The automated tests do not depend on launching Nautilus, opening GTK dialogs, or accessing a live desktop clipboard.
+- [x] Clipboard payload parsing is covered for valid copy payloads, blank lines, empty payloads, and cut payloads.
+- [x] Link-name generation is covered for conflict-free names and deterministic `-link` suffix collisions.
+- [x] Shortcut creation behavior is covered for local file and folder sources in temporary directories.
+- [x] Mixed supported and unsupported source URIs are covered, including the returned warning message behavior.
+- [x] `README.md` explains how to run the tests and clearly states that desktop integration still requires manual verification.
+- [x] No runtime `requirements.txt` is introduced for Nautilus or PyGObject dependencies unless the user explicitly asks for packaging changes.
+- [x] No behavior changes except those explicitly requested in this task.
+- [x] No new background services or desktop hooks unless explicitly requested.
+- [x] No packaging-system expansion unless explicitly requested.
+- [x] No clipboard-format changes unless explicitly requested.
+- [x] No environment or secret-handling changes unless explicitly requested.
 
 # Out Of Scope
 
@@ -87,3 +87,10 @@ This project depends mainly on system packages such as PyGObject and Nautilus Py
 # Commit Message
 
 Add unit tests for core shortcut logic
+
+# Completion
+
+- **Review verdict:** Approve
+- **Summary:** Created 38 pytest tests covering payload parsing, link naming, collision handling, and symlink creation. Added `conftest.py` for test-time path setup and testing section in README.
+- **Verification:** `python3 -m pytest tests/ -v` (38 passed), `python3 -m py_compile src/nautilus_paste_shortcut.py src/core_logic.py`, `bash -n install.sh`
+- **Residual risks:** None.

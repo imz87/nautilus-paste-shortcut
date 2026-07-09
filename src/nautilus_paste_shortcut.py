@@ -22,7 +22,7 @@ DIALOG_TITLE = "Paste Shortcut Here"
 
 class PasteShortcutExtension(GObject.GObject, Nautilus.MenuProvider):
     def get_background_items(self, current_folder):
-        if not self._clipboard_has_copied_files():
+        if not self._clipboard_has_copyable_local_files():
             return []
 
         folder_uri = current_folder.get_uri()
@@ -37,14 +37,37 @@ class PasteShortcutExtension(GObject.GObject, Nautilus.MenuProvider):
         item.connect("activate", self._on_activate, folder_uri)
         return [item]
 
-    def _clipboard_has_copied_files(self):
+    def _clipboard_has_copyable_local_files(self):
         display = Gdk.Display.get_default()
         if display is None:
             return False
 
         clipboard = display.get_clipboard()
         formats = clipboard.get_formats()
-        return formats.contain_mime_type(TARGET_MIME_TYPE)
+        if not formats.contain_mime_type(TARGET_MIME_TYPE):
+            return False
+
+        try:
+            text = clipboard.read_text(None)
+        except GLib.Error:
+            return False
+
+        if not text:
+            return False
+
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        if not lines:
+            return False
+
+        operation = lines[0]
+        if operation != "copy":
+            return False
+
+        for uri in lines[1:]:
+            if local_path_from_uri(uri):
+                return True
+
+        return False
 
     def _on_activate(self, _menu_item, destination_uri):
         display = Gdk.Display.get_default()
