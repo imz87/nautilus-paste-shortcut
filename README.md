@@ -46,7 +46,7 @@ This extension requires a Nautilus 4 desktop with GTK 4, PyGObject, and the **Na
 ### Fedora
 
 ```bash
-sudo dnf install python3-nautilus nautilus-python python3-gobject gtk4
+sudo dnf install nautilus-python python3-gobject gtk4
 ```
 
 ### Ubuntu / Debian
