@@ -487,6 +487,10 @@ jobs:
           ref: v${{ needs.prepare-release.outputs.version }}
           fetch-depth: 0
 
+      - name: Mark workspace as safe for Git
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Set up RPM build environment
         run: |
           rpmdev-setuptree
