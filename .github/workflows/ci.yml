@@ -6,20 +6,6 @@ on:
   pull_request:
     branches: [main, master]
   workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 'Perform dry run without publishing'
-        required: false
-        default: 'true'
-        type: choice
-        options:
-          - 'true'
-          - 'false'
-      target_series:
-        description: 'Ubuntu series to publish to (e.g., noble, jammy)'
-        required: false
-        default: 'noble'
-        type: string
 
 jobs:
   test:
@@ -466,71 +452,3 @@ jobs:
             artifacts/deb-ubuntu/*
             artifacts/pkg-arch/*
           generate_release_notes: true
-
-  publish-ppa:
-    name: Publish to PPA
-    needs: [prepare-release, sign-artifacts, build-source-package, create-tag]
-    if: needs.prepare-release.outputs.should_release == 'true' && (needs.prepare-release.outputs.is_release_branch == 'true' || github.event_name == 'workflow_dispatch')
-    runs-on: ubuntu-latest
-    environment: ppa-publish
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download signed source package
-        uses: actions/download-artifact@v4
-        with:
-          name: signed-artifacts
-          path: artifacts
-
-      - name: Import GPG key
-        id: import-gpg
-        uses: crazy-max/ghaction-import-gpg@v6
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.GPG_PASSPHRASE }}
-
-      - name: Install dput
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y dput
-
-      - name: Configure dput
-        run: |
-          cat > ~/.dput.cf << 'EOF'
-          [ppa]
-          login = anonymous
-          method = ftp
-          host = ppa.launchpad.net
-          incoming = ~${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa/ubuntu
-          EOF
-
-      - name: Dry run (if enabled)
-        if: inputs.dry_run == 'true'
-        run: |
-          echo "=== DRY RUN MODE ==="
-          echo "Would publish to PPA: ${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa"
-          echo "Target series: ${{ inputs.target_series || 'noble' }}"
-          echo "Files to upload:"
-          ls -la artifacts/source-package/*.changes artifacts/source-package/*.dsc 2>/dev/null || echo "No source package files found"
-          echo ""
-          echo "=== DRY RUN COMPLETE ==="
-
-      - name: Publish to PPA (if not dry run)
-        if: inputs.dry_run != 'true'
-        run: |
-          SERIES="${{ inputs.target_series || 'noble' }}"
-          echo "Publishing to PPA for series: $SERIES"
-          dput ppa artifacts/source-package/nautilus-paste-shortcut_*.changes
-
-      - name: Verify publication
-        if: inputs.dry_run != 'true'
-        run: |
-          echo "=== Publication Status ==="
-          echo "Package published to PPA: ${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa"
-          echo "Users can now install with:"
-          echo "  sudo add-apt-repository ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa"
-          echo "  sudo apt update"
-          echo "  sudo apt install nautilus-paste-shortcut"

@@ -76,9 +76,52 @@ nautilus -q
 COPR packages can be built from the same spec file. To publish to COPR:
 
 1. Create a COPR account at `copr.fedorainfracloud.org`
-2. Add a new project
-3. Upload the spec file and source tarball
-4. Enable builds for desired Fedora releases
+2. Create a new project at `https://copr.fedorainfracloud.org/coprs/<username>/new-visit/`
+3. Get your API token at `https://copr.fedorainfracloud.org/api/`
+4. Add the token as a GitHub repository secret named `COPR_API_TOKEN`
+5. Run the `publish-copr.yml` workflow via GitHub Actions
+
+**Required GitHub Actions Secrets:**
+
+| Secret Name | Description |
+|---|---|
+| `COPR_API_TOKEN` | API token from COPR (includes login, username, and token) |
+
+**Manual COPR build:**
+
+```bash
+# Install tools
+sudo dnf install rpm-build rpmdevtools copr-cli
+
+# Add package to COPR (one-time setup)
+copr-cli add-package-scm imz87/nautilus-paste-shortcut \
+    --name nautilus-paste-shortcut \
+    --type git \
+    --clone-url https://github.com/imz87/nautilus-paste-shortcut.git \
+    --commit main \
+    --spec packaging/nautilus-paste-shortcut.spec \
+    --method make_srpm
+
+# Build source RPM
+VERSION=$(cat VERSION)
+rpmdev-setuptree
+git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
+    HEAD -o ~/rpmbuild/SOURCES/nautilus-paste-shortcut-${VERSION}.tar.gz
+sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/nautilus-paste-shortcut.spec
+cp packaging/nautilus-paste-shortcut.spec ~/rpmbuild/SPECS/
+rpmbuild -bs ~/rpmbuild/SPECS/nautilus-paste-shortcut.spec
+
+# Submit build to COPR
+copr-cli build --chroot fedora-rawhide-x86_64 --chroot fedora-44-x86_64 --chroot fedora-43-x86_64 imz87/nautilus-paste-shortcut \
+    ~/rpmbuild/SRPMS/nautilus-paste-shortcut-*.src.rpm
+```
+
+**Users can then install from COPR:**
+
+```bash
+sudo dnf copr enable imz87/nautilus-paste-shortcut
+sudo dnf install nautilus-paste-shortcut
+```
 
 ## Cross-Distro Support
 
