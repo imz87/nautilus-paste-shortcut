@@ -1,5 +1,5 @@
 Name:           nautilus-paste-shortcut
-Version:        0.1.0
+Version:        0.1.21
 Release:        1%{?dist}
 Summary:        Add Paste Shortcut Here action to GNOME Files
 License:        MIT
