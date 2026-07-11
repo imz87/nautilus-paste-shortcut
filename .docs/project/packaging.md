@@ -78,14 +78,14 @@ COPR packages can be built from the same spec file. To publish to COPR:
 1. Create a COPR account at `copr.fedorainfracloud.org`
 2. Create a new project at `https://copr.fedorainfracloud.org/coprs/<username>/new-visit/`
 3. Get your API token at `https://copr.fedorainfracloud.org/api/`
-4. Add the token as a GitHub repository secret named `COPR_API_TOKEN`
+4. Add the full COPR config block as a GitHub repository secret named `COPR_API_TOKEN`
 5. Run the `publish-copr.yml` workflow via GitHub Actions
 
 **Required GitHub Actions Secrets:**
 
 | Secret Name | Description |
 |---|---|
-| `COPR_API_TOKEN` | API token from COPR (includes login, username, and token) |
+| `COPR_API_TOKEN` | Full config block from `https://copr.fedorainfracloud.org/api/`, starting with `[copr-cli]` |
 
 **Manual COPR build:**
 

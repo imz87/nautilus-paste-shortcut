@@ -522,7 +522,12 @@ jobs:
           set -euo pipefail
           if [ -z "$COPR_CONFIG" ]; then
             echo "::error::COPR_API_TOKEN secret is empty."
-            echo "Get your token from: https://copr.fedorainfracloud.org/api/"
+            echo "Copy the full config block from: https://copr.fedorainfracloud.org/api/"
+            exit 1
+          fi
+          if ! printf '%s' "$COPR_CONFIG" | grep -q '^\[copr-cli\]'; then
+            echo "::error::COPR_API_TOKEN must contain the full COPR config block, starting with [copr-cli]."
+            echo "Copy the full config block from: https://copr.fedorainfracloud.org/api/, not just the token value."
             exit 1
           fi
           mkdir -p "${HOME}/.config"
