@@ -282,7 +282,7 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          pacman -Sy --noconfirm base-devel
+          pacman -Sy --noconfirm base-devel nautilus python-gobject gtk4 python-nautilus
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
@@ -309,6 +309,8 @@ jobs:
           name: pkg-arch
           path: /home/builder/build/nautilus-paste-shortcut-*.pkg.tar.zst
 
+  # Source package is separate from build-deb because it produces .changes/.dsc files
+  # for PPA publishing, not a binary .deb for GitHub Releases.
   build-source-package:
     name: Build source package (Ubuntu)
     needs: [prepare-release, source-tarball]
