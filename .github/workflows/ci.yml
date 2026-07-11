@@ -6,6 +6,20 @@ on:
   pull_request:
     branches: [main, master]
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Perform dry run without publishing'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      target_series:
+        description: 'Ubuntu series to publish to (e.g., noble, jammy)'
+        required: false
+        default: 'noble'
+        type: string
 
 jobs:
   test:
@@ -452,3 +466,89 @@ jobs:
             artifacts/deb-ubuntu/*
             artifacts/pkg-arch/*
           generate_release_notes: true
+
+  publish-copr:
+    name: Publish to COPR
+    needs: [prepare-release, create-tag, release]
+    if: needs.prepare-release.outputs.should_release == 'true' && needs.prepare-release.outputs.is_release_branch == 'true'
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+    permissions:
+      contents: read
+    steps:
+      - name: Install packaging tools
+        run: |
+          dnf install -y rpm-build rpmdevtools copr-cli git
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.prepare-release.outputs.version }}
+          fetch-depth: 0
+
+      - name: Set up RPM build environment
+        run: |
+          rpmdev-setuptree
+
+      - name: Create source tarball
+        run: |
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
+              HEAD -o "${HOME}/rpmbuild/SOURCES/nautilus-paste-shortcut-${VERSION}.tar.gz"
+
+      - name: Update spec file version
+        run: |
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/nautilus-paste-shortcut.spec
+          cp packaging/nautilus-paste-shortcut.spec "${HOME}/rpmbuild/SPECS/"
+
+      - name: Build source RPM
+        run: |
+          rpmbuild -bs "${HOME}/rpmbuild/SPECS/nautilus-paste-shortcut.spec"
+          SRPM=$(find "${HOME}/rpmbuild/SRPMS" -name "*.src.rpm" | head -1)
+          echo "SRPM=${SRPM}" >> "$GITHUB_ENV"
+          echo "Built SRPM: ${SRPM}"
+
+      - name: Configure COPR credentials
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          COPR_CONFIG: ${{ secrets.COPR_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$COPR_CONFIG" ]; then
+            echo "::error::COPR_API_TOKEN secret is empty."
+            echo "Get your token from: https://copr.fedorainfracloud.org/api/"
+            exit 1
+          fi
+          mkdir -p "${HOME}/.config"
+          printf '%s' "$COPR_CONFIG" > "${HOME}/.config/copr"
+          chmod 600 "${HOME}/.config/copr"
+
+      - name: Submit build to COPR
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          COPR_OWNER: imz87
+          COPR_PROJECT: nautilus-paste-shortcut
+        run: |
+          set -euo pipefail
+          echo "Submitting to COPR: ${COPR_OWNER}/${COPR_PROJECT}"
+          copr-cli build \
+            --chroot fedora-rawhide-x86_64 \
+            --chroot fedora-44-x86_64 \
+            --chroot fedora-43-x86_64 \
+            "${COPR_OWNER}/${COPR_PROJECT}" \
+            "${SRPM}"
+          echo "Build submitted successfully!"
+          echo "Monitor at: https://copr.fedorainfracloud.org/coprs/${COPR_OWNER}/${COPR_PROJECT}/"
+
+      - name: Dry run summary
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == 'true'
+        run: |
+          echo "=== DRY RUN MODE ==="
+          echo "SRPM built: ${SRPM}"
+          echo ""
+          echo "To submit manually:"
+          echo "  copr-cli build --chroot fedora-rawhide-x86_64 imz87/nautilus-paste-shortcut ${SRPM}"
+          echo ""
+          echo "Or re-run this workflow with dry_run=false"

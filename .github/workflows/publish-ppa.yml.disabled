@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Dry run (do not publish to PPA)'
+        description: 'Dry run (do not publish)'
         required: false
         default: 'true'
         type: choice
@@ -27,27 +27,38 @@ permissions:
 jobs:
   publish-ppa:
     name: Publish to PPA
-    # Only run when CI succeeded and it was a release push (not PR)
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event != 'pull_request')
     runs-on: ubuntu-latest
     environment: ppa-publish
+    if: >
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
-
-      - name: Get version
+      - name: Determine version
         id: version
         run: |
-          VERSION=$(tr -d '[:space:]' < VERSION)
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Publishing version: ${VERSION}"
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            # Extract version from the completed workflow's tag
+            TAG="${{ github.event.workflow_run.head_branch }}"
+            if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              VERSION="${TAG#v}"
+            else
+              echo "::error::Could not determine version from workflow run"
+              exit 1
+            fi
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "Version: ${VERSION}"
 
-      - name: Download signed source package
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ steps.version.outputs.version }}
+          fetch-depth: 0
+
+      - name: Download signed artifacts
         uses: actions/download-artifact@v4
         with:
           name: signed-artifacts
@@ -76,7 +87,7 @@ jobs:
           EOF
 
       - name: Dry run (if enabled)
-        if: inputs.dry_run != 'false'
+        if: inputs.dry_run == 'true'
         run: |
           echo "=== DRY RUN MODE ==="
           echo "Would publish to PPA: ${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa"
@@ -87,14 +98,14 @@ jobs:
           echo "=== DRY RUN COMPLETE ==="
 
       - name: Publish to PPA (if not dry run)
-        if: inputs.dry_run == 'false'
+        if: inputs.dry_run != 'true'
         run: |
           SERIES="${{ inputs.target_series || 'noble' }}"
           echo "Publishing to PPA for series: $SERIES"
           dput ppa artifacts/source-package/nautilus-paste-shortcut_*.changes
 
       - name: Verify publication
-        if: inputs.dry_run == 'false'
+        if: inputs.dry_run != 'true'
         run: |
           echo "=== Publication Status ==="
           echo "Package published to PPA: ${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa"
