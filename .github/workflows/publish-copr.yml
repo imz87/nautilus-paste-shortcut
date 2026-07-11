@@ -1,14 +1,12 @@
 name: Publish to COPR
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to publish (e.g., 0.1.26)'
-        required: true
-        type: string
       dry_run:
         description: 'Dry run (do not submit to COPR)'
         required: false
@@ -24,6 +22,11 @@ permissions:
 jobs:
   publish-copr:
     name: Publish to COPR
+    # Only run when CI succeeded and it was a release push (not PR)
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event != 'pull_request')
     runs-on: ubuntu-latest
     container:
       image: fedora:latest
@@ -32,26 +35,18 @@ jobs:
         run: |
           dnf install -y rpm-build rpmdevtools copr-cli git
 
-      - name: Get version from tag
-        id: version
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          INPUT_VERSION: ${{ inputs.version }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: |
-          if [ "$EVENT_NAME" = "release" ]; then
-            VERSION="${RELEASE_TAG#v}"
-          else
-            VERSION="$INPUT_VERSION"
-          fi
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "Publishing version: ${VERSION}"
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: v${{ steps.version.outputs.version }}
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(tr -d '[:space:]' < VERSION)
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Publishing version: ${VERSION}"
 
       - name: Set up RPM build environment
         run: |
@@ -109,7 +104,7 @@ jobs:
           echo "Monitor at: https://copr.fedorainfracloud.org/coprs/${COPR_OWNER}/${COPR_PROJECT}/"
 
       - name: Dry run summary
-        if: inputs.dry_run == 'true' || (github.event_name == 'release' && inputs.dry_run != 'false')
+        if: inputs.dry_run != 'false'
         run: |
           echo "=== DRY RUN MODE ==="
           echo "SRPM built: ${SRPM}"
