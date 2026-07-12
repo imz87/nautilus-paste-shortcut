@@ -325,7 +325,7 @@ jobs:
       - name: Install build dependencies
         run: |
           apt-get update
-          apt-get install -y devscripts debhelper fakeroot
+          apt-get install -y build-essential devscripts debhelper fakeroot
 
       - name: Build source package
         run: |
@@ -511,7 +511,7 @@ jobs:
       - name: Install build and upload tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y devscripts debhelper fakeroot dput
+          sudo apt-get install -y build-essential devscripts debhelper fakeroot dput
 
       - name: Build source package
         run: |
