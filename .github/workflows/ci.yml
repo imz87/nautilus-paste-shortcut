@@ -566,6 +566,104 @@ jobs:
           echo "  sudo apt update"
           echo "  sudo apt install nautilus-paste-shortcut"
 
+  publish-obs:
+    name: Publish to OBS (openSUSE)
+    needs: [prepare-release, create-tag, release]
+    if: needs.prepare-release.outputs.should_release == 'true' && needs.prepare-release.outputs.is_release_branch == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Validate OBS configuration
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          OBS_TOKEN: ${{ secrets.OPENSUSE_OBS_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$OBS_TOKEN" ]; then
+            echo "::error::OPENSUSE_OBS_TOKEN secret is not set."
+            echo "Generate a token at: https://build.opensuse.org/home/my"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.prepare-release.outputs.version }}
+          fetch-depth: 0
+
+      - name: Install osc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y osc
+
+      - name: Configure osc
+        run: |
+          osc -A https://build.opensuse.org ls > /dev/null 2>&1 || true
+          mkdir -p "${HOME}/.osc"
+          cat > "${HOME}/.osc/oscrc" << EOF
+          [general]
+          apiurl = https://build.opensuse.org
+
+          [https://build.opensuse.org]
+          user = _obs_TOKEN_
+          pass = ${{ secrets.OPENSUSE_OBS_TOKEN }}
+          EOF
+
+      - name: Create source tarball
+        run: |
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
+              HEAD -o "nautilus-paste-shortcut-${VERSION}.tar.gz"
+
+      - name: Submit to OBS
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          OBS_PROJECT: home:imz87:nautilus-paste-shortcut
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          PACKAGE_DIR="${HOME}/obs-package"
+          mkdir -p "${PACKAGE_DIR}"
+
+          # Copy source tarball
+          cp nautilus-paste-shortcut-*.tar.gz "${PACKAGE_DIR}/"
+
+          # Copy spec file
+          cp packaging/opensuse/nautilus-paste-shortcut.spec "${PACKAGE_DIR}/nautilus-paste-shortcut.spec"
+          sed -i "s/^Version:.*/Version:        ${VERSION}/" "${PACKAGE_DIR}/nautilus-paste-shortcut.spec"
+
+          # Create OBS package
+          cd "${PACKAGE_DIR}"
+          osc -A https://build.opensuse.org meta prj -e "${OBS_PROJECT}" || true
+          osc -A https://build.opensuse.org meta pkg "${OBS_PROJECT}" nautilus-paste-shortcut -e - << EOF
+          <package name="nautilus-paste-shortcut" project="${OBS_PROJECT}">
+            <title>nautilus-paste-shortcut</title>
+            <description>A Nautilus extension for creating symlinks</description>
+          </package>
+          EOF
+
+          # Import source files
+          osc -A https://build.opensuse.org importsrc "${OBS_PROJECT}" nautilus-paste-shortcut \
+              nautilus-paste-shortcut-${VERSION}.tar.gz \
+              nautilus-paste-shortcut.spec
+
+          echo "Submitted to OBS: ${OBS_PROJECT}"
+          echo "Monitor at: https://build.opensuse.org/project/show/${OBS_PROJECT}"
+
+      - name: Dry run summary
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == 'true'
+        run: |
+          echo "=== DRY RUN MODE ==="
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          echo "Source tarball: nautilus-paste-shortcut-${VERSION}.tar.gz"
+          echo ""
+          echo "To submit manually:"
+          echo "  osc -A https://build.opensuse.org importsrc home:imz87:nautilus-paste-shortcut \\"
+          echo "      nautilus-paste-shortcut-${VERSION}.tar.gz packaging/opensuse/nautilus-paste-shortcut.spec"
+          echo ""
+          echo "Or re-run this workflow with dry_run=false"
+
   publish-copr:
     name: Publish to COPR
     needs: [prepare-release, create-tag, release]
