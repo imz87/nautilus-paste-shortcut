@@ -666,6 +666,101 @@ jobs:
           echo ""
           echo "Or re-run this workflow with dry_run=false"
 
+  publish-aur:
+    name: Publish to AUR (Arch)
+    needs: [prepare-release, create-tag, release]
+    if: needs.prepare-release.outputs.should_release == 'true' && needs.prepare-release.outputs.is_release_branch == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Validate AUR configuration
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          AUR_SSH_KEY: ${{ secrets.ARCH_AUR_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$AUR_SSH_KEY" ]; then
+            echo "::error::ARCH_AUR_SSH_KEY secret is not set."
+            echo "Generate an SSH key and add it at: https://aur.archlinux.org/account/ssh-keys"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.prepare-release.outputs.version }}
+          fetch-depth: 0
+
+      - name: Configure SSH
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          AUR_SSH_KEY: ${{ secrets.ARCH_AUR_SSH_KEY }}
+        run: |
+          mkdir -p "${HOME}/.ssh"
+          echo "${AUR_SSH_KEY}" > "${HOME}/.ssh/aur"
+          chmod 600 "${HOME}/.ssh/aur"
+          cat > "${HOME}/.ssh/config" << 'SSHEOF'
+          Host aur.archlinux.org
+            IdentityFile ~/.ssh/aur
+            User aur
+          SSHEOF
+          ssh-keyscan aur.archlinux.org >> "${HOME}/.ssh/known_hosts" 2>/dev/null
+
+      - name: Update AUR package
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          AUR_PACKAGE: nautilus-paste-shortcut
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+
+          # Clone AUR repo
+          AUR_DIR="${HOME}/aur-package"
+          git clone "ssh://aur@aur.archlinux.org/${AUR_PACKAGE}.git" "${AUR_DIR}"
+          cd "${AUR_DIR}"
+
+          # Create source tarball URL
+          SOURCE_URL="https://github.com/imz87/nautilus-paste-shortcut/archive/refs/tags/v${VERSION}.tar.gz"
+
+          # Generate SHA256 checksum
+          SHA256=$(curl -sL "${SOURCE_URL}" | sha256sum | cut -d' ' -f1)
+
+          # Update PKGBUILD
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          sed -i "s|source=.*|source=(\"${SOURCE_URL}\")|" PKGBUILD
+          sed -i "s|sha256sums=.*|sha256sums=('${SHA256}')|" PKGBUILD
+
+          # Update .SRCINFO
+          makepkg --printsrcinfo > .SRCINFO
+
+          # Commit and push
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add PKGBUILD .SRCINFO
+          git commit -m "Update to version ${VERSION}"
+          git push origin master
+
+          echo "Published to AUR: ${AUR_PACKAGE}"
+          echo "Monitor at: https://aur.archlinux.org/${AUR_PACKAGE}"
+
+      - name: Dry run summary
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == 'true'
+        run: |
+          echo "=== DRY RUN MODE ==="
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          echo "AUR package: nautilus-paste-shortcut"
+          echo "Version: ${VERSION}"
+          echo ""
+          echo "To publish manually:"
+          echo "  git clone ssh://aur@aur.archlinux.org/nautilus-paste-shortcut.git"
+          echo "  # Update PKGBUILD with pkgver=${VERSION}"
+          echo "  # makepkg --printsrcinfo > .SRCINFO"
+          echo "  # git add PKGBUILD .SRCINFO && git commit -m 'Update to ${VERSION}' && git push"
+          echo ""
+          echo "Or re-run this workflow with dry_run=false"
+
   publish-copr:
     name: Publish to COPR
     needs: [prepare-release, create-tag, release]
