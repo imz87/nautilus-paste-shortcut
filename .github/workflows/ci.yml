@@ -651,7 +651,7 @@ jobs:
           mkdir -p "${WORK_DIR}"
           cd "${WORK_DIR}"
 
-          osc --config "${OSC_CONFIG}" -A https://api.opensuse.org mkpac "${OBS_PROJECT}/${OBS_PACKAGE}" 2>/dev/null || true
+          osc --config "${OSC_CONFIG}" -A https://api.opensuse.org rmkpac "${OBS_PROJECT}" "${OBS_PACKAGE}" 2>/dev/null || true
           osc --config "${OSC_CONFIG}" -A https://api.opensuse.org checkout "${OBS_PROJECT}" "${OBS_PACKAGE}"
           cd "${OBS_PROJECT}/${OBS_PACKAGE}"
 
