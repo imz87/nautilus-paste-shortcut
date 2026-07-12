@@ -467,6 +467,105 @@ jobs:
             artifacts/pkg-arch/*
           generate_release_notes: true
 
+  publish-ppa:
+    name: Publish to PPA
+    needs: [prepare-release, create-tag, release]
+    if: needs.prepare-release.outputs.should_release == 'true' && needs.prepare-release.outputs.is_release_branch == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Validate PPA configuration
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          PPA_USERNAME: ${{ secrets.PPA_LAUNCHPAD_USERNAME }}
+          PPA_GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$PPA_USERNAME" ]; then
+            echo "::error::PPA_LAUNCHPAD_USERNAME secret is not set."
+            echo "Set it to: imz87 in GitHub repo Settings → Secrets."
+            exit 1
+          fi
+          if [ -z "$PPA_GPG_KEY" ]; then
+            echo "::error::GPG_PRIVATE_KEY secret is not set."
+            echo "This key must be registered with Launchpad for the PPA owner."
+            exit 1
+          fi
+          echo "PPA owner: ${PPA_USERNAME}"
+          echo "PPA: ppa:${PPA_USERNAME}/nautilus-paste-shortcut"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.prepare-release.outputs.version }}
+          fetch-depth: 0
+
+      - name: Import GPG key
+        id: import-gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Install build and upload tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y devscripts debhelper fakeroot dput
+
+      - name: Build source package
+        run: |
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          SERIES="${{ inputs.target_series || 'noble' }}"
+          cp -r packaging/debian debian
+          sed -i "1s/^nautilus-paste-shortcut (.*/nautilus-paste-shortcut (${VERSION}-1) ${SERIES}; urgency=low/" debian/changelog
+          dpkg-buildpackage -us -uc -S
+
+      - name: Sign source package
+        run: |
+          debsign --re-sign -k ${{ steps.import-gpg.outputs.fingerprint }} ../*.changes
+
+      - name: Configure dput
+        run: |
+          cat > ~/.dput.cf << 'EOF'
+          [ppa]
+          login = anonymous
+          method = ftp
+          host = ppa.launchpad.net
+          incoming = ~${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ubuntu/nautilus-paste-shortcut
+          EOF
+
+      - name: Dry run (if enabled)
+        if: inputs.dry_run == 'true'
+        run: |
+          echo "=== DRY RUN MODE ==="
+          echo "Would publish to PPA: ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/nautilus-paste-shortcut"
+          echo "Target series: ${{ inputs.target_series || 'noble' }}"
+          echo "Files to upload:"
+          ls -la ../*.changes ../*.dsc 2>/dev/null || echo "No source package files found"
+          echo ""
+          echo "To submit manually:"
+          echo "  dput ppa ../*.changes"
+          echo ""
+          echo "=== DRY RUN COMPLETE ==="
+
+      - name: Publish to PPA (if not dry run)
+        if: inputs.dry_run != 'true'
+        run: |
+          echo "Publishing to PPA: ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/nautilus-paste-shortcut"
+          dput ppa ../*.changes
+
+      - name: Verify publication
+        if: inputs.dry_run != 'true'
+        run: |
+          echo "=== Publication Status ==="
+          echo "Package published to PPA: ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/nautilus-paste-shortcut"
+          echo ""
+          echo "Users can now install with:"
+          echo "  sudo add-apt-repository ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/nautilus-paste-shortcut"
+          echo "  sudo apt update"
+          echo "  sudo apt install nautilus-paste-shortcut"
+
   publish-copr:
     name: Publish to COPR
     needs: [prepare-release, create-tag, release]

@@ -276,21 +276,15 @@ The first native repository target is PPA for Debian/Ubuntu-family distribution.
 | Secret Name | Description |
 |---|---|
 | `PPA_LAUNCHPAD_USERNAME` | Launchpad username for PPA access |
-| `PPA_GPG_PRIVATE_KEY` | GPG private key for package signing |
-| `PPA_GPG_PASSPHRASE` | Passphrase for the GPG key (can be empty) |
-
-**Required GitHub Environment:**
-
-| Environment Name | Description |
-|---|---|
-| `ppa-publish` | Protected environment for PPA publication |
+| `GPG_PRIVATE_KEY` | GPG private key for package signing |
+| `GPG_PASSPHRASE` | Passphrase for the GPG key (can be empty) |
 
 ### PPA Setup Requirements
 
 1. **Launchpad account:** Create an account at `launchpad.net`
 2. **PPA creation:** Create a PPA in Launchpad settings
 3. **GPG key:** Generate a GPG key for package signing
-4. **GitHub secrets:** Configure the required secrets and environment
+4. **GitHub secrets:** Configure the required secrets
 
 ### PPA Publishing Workflow
 
@@ -305,10 +299,10 @@ The workflow runs on:
 4. Upload to PPA using `dput`
 
 **Safety features:**
-- Requires GitHub Environment approval (`ppa-publish`)
 - Dry-run mode for testing
 - Tag validation against VERSION file
 - GPG signing for package authenticity
+- Secret validation before upload
 
 ### PPA Installation
 
