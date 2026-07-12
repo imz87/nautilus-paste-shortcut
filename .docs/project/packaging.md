@@ -86,7 +86,8 @@ COPR packages can be built from the same spec file. To publish to COPR:
 | Secret Name | Description |
 |---|---|
 | `COPR_API_TOKEN` | Full config block from `https://copr.fedorainfracloud.org/api/`, starting with `[copr-cli]` |
-| `OPENSUSE_OBS_TOKEN` | API token from `https://build.opensuse.org/home/my` |
+| `OPENSUSE_OBS_USERNAME` | OBS username for openSUSE publishing |
+| `OPENSUSE_OBS_PASSWORD` | OBS password for openSUSE publishing |
 | `ARCH_AUR_SSH_KEY` | SSH private key for AUR (add public key at `https://aur.archlinux.org/account/ssh-keys`) |
 
 **Manual COPR build:**

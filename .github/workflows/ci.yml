@@ -577,12 +577,16 @@ jobs:
       - name: Validate OBS configuration
         if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
         env:
-          OBS_TOKEN: ${{ secrets.OPENSUSE_OBS_TOKEN }}
+          OBS_USERNAME: ${{ secrets.OPENSUSE_OBS_USERNAME }}
+          OBS_PASSWORD: ${{ secrets.OPENSUSE_OBS_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ -z "$OBS_TOKEN" ]; then
-            echo "::error::OPENSUSE_OBS_TOKEN secret is not set."
-            echo "Generate a token at: https://build.opensuse.org/home/my"
+          if [ -z "$OBS_USERNAME" ]; then
+            echo "::error::OPENSUSE_OBS_USERNAME secret is not set."
+            exit 1
+          fi
+          if [ -z "$OBS_PASSWORD" ]; then
+            echo "::error::OPENSUSE_OBS_PASSWORD secret is not set."
             exit 1
           fi
 
@@ -598,21 +602,22 @@ jobs:
           sudo apt-get install -y osc
 
       - name: Configure osc
+        env:
+          OBS_USERNAME: ${{ secrets.OPENSUSE_OBS_USERNAME }}
+          OBS_PASSWORD: ${{ secrets.OPENSUSE_OBS_PASSWORD }}
         run: |
           mkdir -p "${HOME}/.config/osc"
-          cat > "${HOME}/.config/osc/oscrc" << OSCEOF
+          cat > "${HOME}/.config/osc/oscrc" <<EOF
           [general]
           apiurl = https://build.opensuse.org
 
           [https://build.opensuse.org]
-          user = _obs_TOKEN_
-          pass = ${OPENSUSE_OBS_TOKEN}
+          user = ${OBS_USERNAME}
+          pass = ${OBS_PASSWORD}
           credentials_manager_class = osc.credentialsmgrmodule.CredentialsManager
-          OSCEOF
-          # Remove leading spaces from heredoc
+          EOF
           sed -i 's/^          //' "${HOME}/.config/osc/oscrc"
-        env:
-          OPENSUSE_OBS_TOKEN: ${{ secrets.OPENSUSE_OBS_TOKEN }}
+          chmod 600 "${HOME}/.config/osc/oscrc"
 
       - name: Create source tarball
         run: |
@@ -624,34 +629,28 @@ jobs:
         if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
         env:
           OBS_PROJECT: home:imz87:nautilus-paste-shortcut
+          OBS_PACKAGE: nautilus-paste-shortcut
         run: |
           set -euo pipefail
           VERSION="${{ needs.prepare-release.outputs.version }}"
 
-          # Create package if it doesn't exist
-          osc -A https://build.opensuse.org mkpac "${OBS_PROJECT}/nautilus-paste-shortcut" 2>/dev/null || true
-
-          # Checkout package working copy
           WORK_DIR="${HOME}/obs-work"
           mkdir -p "${WORK_DIR}"
           cd "${WORK_DIR}"
-          osc -A https://build.opensuse.org checkout "${OBS_PROJECT}/nautilus-paste-shortcut"
 
-          cd "${OBS_PROJECT}/nautilus-paste-shortcut"
+          osc -A https://build.opensuse.org checkout "${OBS_PROJECT}" "${OBS_PACKAGE}"
+          cd "${OBS_PROJECT}/${OBS_PACKAGE}"
 
-          # Copy source tarball
+          rm -f nautilus-paste-shortcut-*.tar.gz
           cp "${GITHUB_WORKSPACE}/nautilus-paste-shortcut-${VERSION}.tar.gz" .
-
-          # Copy and patch spec file
           cp "${GITHUB_WORKSPACE}/packaging/opensuse/nautilus-paste-shortcut.spec" nautilus-paste-shortcut.spec
           sed -i "s/^Version:.*/Version:        ${VERSION}/" nautilus-paste-shortcut.spec
 
-          # Add and commit
-          osc add nautilus-paste-shortcut-${VERSION}.tar.gz nautilus-paste-shortcut.spec
+          osc addremove
           osc commit -m "Update to version ${VERSION}"
 
-          echo "Submitted to OBS: ${OBS_PROJECT}"
-          echo "Monitor at: https://build.opensuse.org/project/show/${OBS_PROJECT}"
+          echo "Submitted to OBS: ${OBS_PROJECT}/${OBS_PACKAGE}"
+          echo "Monitor at: https://build.opensuse.org/package/show/${OBS_PROJECT}/${OBS_PACKAGE}"
 
       - name: Dry run summary
         if: github.event_name == 'workflow_dispatch' && inputs.dry_run == 'true'
@@ -661,8 +660,9 @@ jobs:
           echo "Source tarball: nautilus-paste-shortcut-${VERSION}.tar.gz"
           echo ""
           echo "To submit manually:"
-          echo "  osc -A https://build.opensuse.org importsrc home:imz87:nautilus-paste-shortcut \\"
-          echo "      nautilus-paste-shortcut-${VERSION}.tar.gz packaging/opensuse/nautilus-paste-shortcut.spec"
+          echo "  osc -A https://build.opensuse.org checkout home:imz87:nautilus-paste-shortcut nautilus-paste-shortcut"
+          echo "  # copy files, then:"
+          echo "  osc addremove && osc commit -m 'Update to ${VERSION}'"
           echo ""
           echo "Or re-run this workflow with dry_run=false"
 
