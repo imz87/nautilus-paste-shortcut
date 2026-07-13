@@ -6,6 +6,15 @@ Add a `Paste Shortcut Here` action to GNOME Files on Fedora and other Nautilus-b
 
 The extension reads Nautilus's copied-files clipboard payload after a normal `Ctrl+C` and creates symbolic links in the folder you right-clicked.
 
+### Quick Links
+
+- [Latest Release](https://github.com/imz87/nautilus-paste-shortcut/releases/latest)
+- [Installation Guide](#install)
+- [COPR Repository (Fedora)](#copr-install-fedora)
+- [PPA Repository (Ubuntu/Debian)](#ppaapt-repository-ubuntudebian)
+- [Report a Bug](https://github.com/imz87/nautilus-paste-shortcut/issues)
+- [Sponsor / Donate](https://github.com/sponsors/imz87)
+
 ## Features
 
 - Supports multiple copied files and folders.
@@ -124,6 +133,29 @@ The RPM installs the extension files to the system-wide path:
 After installation, restart Nautilus:
 
 ```bash
+nautilus -q
+```
+
+### COPR Install (Fedora)
+
+For Fedora users, the easiest way to install is through the COPR repository:
+
+```bash
+sudo dnf copr enable imz87/nautilus-paste-shortcut
+sudo dnf install nautilus-paste-shortcut
+```
+
+This provides automatic updates through `dnf`. After installation, restart Nautilus:
+
+```bash
+nautilus -q
+```
+
+**Uninstalling from COPR:**
+
+```bash
+sudo dnf remove nautilus-paste-shortcut
+sudo dnf copr disable imz87/nautilus-paste-shortcut
 nautilus -q
 ```
 
@@ -324,6 +356,19 @@ If the extension files are installed but `Paste Shortcut Here` does not appear i
 ### Nautilus crashes on paste
 
 On some Nautilus/Wayland setups, the native clipboard transfer API can crash. This extension uses a text-based clipboard read path to avoid that issue. If you still see crashes, check the terminal output for error messages and open an issue.
+
+## Support & Donations
+
+If you find this project useful, consider supporting its development:
+
+- [GitHub Sponsors](https://github.com/sponsors/imz87)
+- [Open an Issue](https://github.com/imz87/nautilus-paste-shortcut/issues) for bugs or feature requests
+- [Contribute](https://github.com/imz87/nautilus-paste-shortcut/pulls) with a pull request
+
+Your support helps with:
+- Maintaining and improving the extension
+- Packaging for more distributions
+- Writing better documentation
 
 ## License
 

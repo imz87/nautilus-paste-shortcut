@@ -260,12 +260,14 @@ jobs:
           cp -r packaging/debian debian
           sed -i "1s/^nautilus-paste-shortcut (.*/nautilus-paste-shortcut (${VERSION}-1) noble; urgency=low/" debian/changelog
           dpkg-buildpackage -us -uc -b
+          mkdir -p output
+          cp ../*.deb output/
 
       - name: Upload DEB
         uses: actions/upload-artifact@v4
         with:
           name: deb-ubuntu
-          path: ../nautilus-paste-shortcut_*.deb
+          path: output/*.deb
 
   build-arch:
     name: Build package (Arch Linux)
@@ -275,9 +277,12 @@ jobs:
     container:
       image: archlinux:latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Install build dependencies
         run: |
-          pacman -Sy --noconfirm base-devel
+          pacman -Sy --noconfirm base-devel nautilus python-gobject gtk4 python-nautilus
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
@@ -304,6 +309,8 @@ jobs:
           name: pkg-arch
           path: /home/builder/build/nautilus-paste-shortcut-*.pkg.tar.zst
 
+  # Source package is separate from build-deb because it produces .changes/.dsc files
+  # for PPA publishing, not a binary .deb for GitHub Releases.
   build-source-package:
     name: Build source package (Ubuntu)
     needs: [prepare-release, source-tarball]
@@ -318,7 +325,7 @@ jobs:
       - name: Install build dependencies
         run: |
           apt-get update
-          apt-get install -y devscripts debhelper fakeroot
+          apt-get install -y build-essential devscripts debhelper fakeroot
 
       - name: Build source package
         run: |
@@ -462,21 +469,37 @@ jobs:
 
   publish-ppa:
     name: Publish to PPA
-    needs: [prepare-release, sign-artifacts, build-source-package, create-tag]
-    if: needs.prepare-release.outputs.should_release == 'true' && (needs.prepare-release.outputs.is_release_branch == 'true' || github.event_name == 'workflow_dispatch')
+    needs: [prepare-release, create-tag, release]
+    if: needs.prepare-release.outputs.should_release == 'true' && needs.prepare-release.outputs.is_release_branch == 'true'
     runs-on: ubuntu-latest
-    environment: ppa-publish
     permissions:
       contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Validate PPA configuration
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          PPA_USERNAME: ${{ secrets.PPA_LAUNCHPAD_USERNAME }}
+          PPA_GPG_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$PPA_USERNAME" ]; then
+            echo "::error::PPA_LAUNCHPAD_USERNAME secret is not set."
+            echo "Set it to: imz87 in GitHub repo Settings → Secrets."
+            exit 1
+          fi
+          if [ -z "$PPA_GPG_KEY" ]; then
+            echo "::error::GPG_PRIVATE_KEY secret is not set."
+            echo "This key must be registered with Launchpad for the PPA owner."
+            exit 1
+          fi
+          echo "PPA owner: ${PPA_USERNAME}"
+          echo "PPA: ppa:${PPA_USERNAME}/nautilus-paste-shortcut"
 
-      - name: Download signed source package
-        uses: actions/download-artifact@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          name: signed-artifacts
-          path: artifacts
+          ref: v${{ needs.prepare-release.outputs.version }}
+          fetch-depth: 0
 
       - name: Import GPG key
         id: import-gpg
@@ -485,10 +508,22 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
-      - name: Install dput
+      - name: Install build and upload tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y dput
+          sudo apt-get install -y build-essential devscripts debhelper fakeroot dput
+
+      - name: Build source package
+        run: |
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          SERIES="${{ inputs.target_series || 'noble' }}"
+          cp -r packaging/debian debian
+          sed -i "1s/^nautilus-paste-shortcut (.*/nautilus-paste-shortcut (${VERSION}-1) ${SERIES}; urgency=low/" debian/changelog
+          dpkg-buildpackage -us -uc -S
+
+      - name: Sign source package
+        run: |
+          debsign --re-sign -k ${{ steps.import-gpg.outputs.fingerprint }} ../*.changes
 
       - name: Configure dput
         run: |
@@ -497,33 +532,341 @@ jobs:
           login = anonymous
           method = ftp
           host = ppa.launchpad.net
-          incoming = ~${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa/ubuntu
+          incoming = ~${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ubuntu/nautilus-paste-shortcut
           EOF
 
       - name: Dry run (if enabled)
         if: inputs.dry_run == 'true'
         run: |
           echo "=== DRY RUN MODE ==="
-          echo "Would publish to PPA: ${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa"
+          echo "Would publish to PPA: ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/nautilus-paste-shortcut"
           echo "Target series: ${{ inputs.target_series || 'noble' }}"
           echo "Files to upload:"
-          ls -la artifacts/source-package/*.changes artifacts/source-package/*.dsc 2>/dev/null || echo "No source package files found"
+          ls -la ../*.changes ../*.dsc 2>/dev/null || echo "No source package files found"
+          echo ""
+          echo "To submit manually:"
+          echo "  dput ppa ../*.changes"
           echo ""
           echo "=== DRY RUN COMPLETE ==="
 
       - name: Publish to PPA (if not dry run)
         if: inputs.dry_run != 'true'
         run: |
-          SERIES="${{ inputs.target_series || 'noble' }}"
-          echo "Publishing to PPA for series: $SERIES"
-          dput ppa artifacts/source-package/nautilus-paste-shortcut_*.changes
+          echo "Publishing to PPA: ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/nautilus-paste-shortcut"
+          dput ppa ../*.changes
 
       - name: Verify publication
         if: inputs.dry_run != 'true'
         run: |
           echo "=== Publication Status ==="
-          echo "Package published to PPA: ${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa"
+          echo "Package published to PPA: ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/nautilus-paste-shortcut"
+          echo ""
           echo "Users can now install with:"
-          echo "  sudo add-apt-repository ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa"
+          echo "  sudo add-apt-repository ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/nautilus-paste-shortcut"
           echo "  sudo apt update"
           echo "  sudo apt install nautilus-paste-shortcut"
+
+  publish-obs:
+    name: Publish to OBS (openSUSE)
+    needs: [prepare-release, create-tag, release]
+    if: needs.prepare-release.outputs.should_release == 'true' && needs.prepare-release.outputs.is_release_branch == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Validate OBS configuration
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          OBS_USERNAME: ${{ secrets.OPENSUSE_OBS_USERNAME }}
+          OBS_PASSWORD: ${{ secrets.OPENSUSE_OBS_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "$OBS_USERNAME" ]; then
+            echo "::error::OPENSUSE_OBS_USERNAME secret is not set."
+            exit 1
+          fi
+          if [ -z "$OBS_PASSWORD" ]; then
+            echo "::error::OPENSUSE_OBS_PASSWORD secret is not set."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.prepare-release.outputs.version }}
+          fetch-depth: 0
+
+      - name: Install osc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y osc
+
+      - name: Configure osc
+        env:
+          OBS_USERNAME: ${{ secrets.OPENSUSE_OBS_USERNAME }}
+          OBS_PASSWORD: ${{ secrets.OPENSUSE_OBS_PASSWORD }}
+        run: |
+          OSC_CONFIG="${RUNNER_TEMP}/oscrc"
+          printf '%s\n' \
+            "[general]" \
+            "apiurl = https://api.opensuse.org" \
+            "" \
+            "[https://api.opensuse.org]" \
+            "user = ${OBS_USERNAME}" \
+            "pass = ${OBS_PASSWORD}" \
+            > "${OSC_CONFIG}"
+          chmod 600 "${OSC_CONFIG}"
+          echo "OSC_CONFIG=${OSC_CONFIG}" >> "${GITHUB_ENV}"
+          echo "osc config written for user: ${OBS_USERNAME}"
+
+      - name: Create source tarball
+        run: |
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
+              HEAD -o "nautilus-paste-shortcut-${VERSION}.tar.gz"
+
+      - name: Test OBS connection
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        run: |
+          osc --version
+          echo "HOME=${HOME}"
+          ls -la "${OSC_CONFIG}"
+          osc --config "${OSC_CONFIG}" -A https://api.opensuse.org ls home:imz87:nautilus-paste-shortcut || {
+            echo "::error::OBS authentication failed."
+            echo "Check that OPENSUSE_OBS_USERNAME and OPENSUSE_OBS_PASSWORD are correct."
+            exit 1
+          }
+          echo "OBS authentication successful"
+
+      - name: Submit to OBS
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          OBS_PROJECT: home:imz87:nautilus-paste-shortcut
+          OBS_PACKAGE: nautilus-paste-shortcut
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+
+          WORK_DIR="${HOME}/obs-work"
+          mkdir -p "${WORK_DIR}"
+          cd "${WORK_DIR}"
+
+          osc --config "${OSC_CONFIG}" -A https://api.opensuse.org rmkpac "${OBS_PROJECT}" "${OBS_PACKAGE}" 2>/dev/null || true
+          osc --config "${OSC_CONFIG}" -A https://api.opensuse.org checkout "${OBS_PROJECT}" "${OBS_PACKAGE}"
+          cd "${OBS_PROJECT}/${OBS_PACKAGE}"
+
+          rm -f nautilus-paste-shortcut-*.tar.gz
+          cp "${GITHUB_WORKSPACE}/nautilus-paste-shortcut-${VERSION}.tar.gz" .
+          cp "${GITHUB_WORKSPACE}/packaging/opensuse/nautilus-paste-shortcut.spec" nautilus-paste-shortcut.spec
+          sed -i "s/^Version:.*/Version:        ${VERSION}/" nautilus-paste-shortcut.spec
+
+          osc --config "${OSC_CONFIG}" addremove
+          osc --config "${OSC_CONFIG}" commit -m "Update to version ${VERSION}"
+
+          echo "Submitted to OBS: ${OBS_PROJECT}/${OBS_PACKAGE}"
+          echo "Monitor at: https://build.opensuse.org/package/show/${OBS_PROJECT}/${OBS_PACKAGE}"
+
+      - name: Dry run summary
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == 'true'
+        run: |
+          echo "=== DRY RUN MODE ==="
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          echo "Source tarball: nautilus-paste-shortcut-${VERSION}.tar.gz"
+          echo ""
+          echo "To submit manually:"
+          echo "  osc -A https://api.opensuse.org checkout home:imz87:nautilus-paste-shortcut nautilus-paste-shortcut"
+          echo "  # copy files, then:"
+          echo "  osc addremove && osc commit -m 'Update to ${VERSION}'"
+          echo ""
+          echo "Or re-run this workflow with dry_run=false"
+
+  publish-aur:
+    name: Publish to AUR (Arch)
+    needs: [prepare-release, create-tag, release]
+    # Temporarily disabled until the AUR account/package is ready.
+    if: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Validate AUR configuration
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          AUR_SSH_KEY: ${{ secrets.ARCH_AUR_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "$AUR_SSH_KEY" ]; then
+            echo "::error::ARCH_AUR_SSH_KEY secret is not set."
+            echo "Generate an SSH key and add it at: https://aur.archlinux.org/account/ssh-keys"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.prepare-release.outputs.version }}
+          fetch-depth: 0
+
+      - name: Configure SSH
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          AUR_SSH_KEY: ${{ secrets.ARCH_AUR_SSH_KEY }}
+        run: |
+          mkdir -p "${HOME}/.ssh"
+          echo "${AUR_SSH_KEY}" > "${HOME}/.ssh/aur"
+          chmod 600 "${HOME}/.ssh/aur"
+          cat > "${HOME}/.ssh/config" << 'SSHEOF'
+          Host aur.archlinux.org
+            IdentityFile ~/.ssh/aur
+            User aur
+          SSHEOF
+          ssh-keyscan aur.archlinux.org >> "${HOME}/.ssh/known_hosts" 2>/dev/null
+
+      - name: Update AUR package
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          AUR_PACKAGE: nautilus-paste-shortcut
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+
+          # Clone AUR repo
+          AUR_DIR="${HOME}/aur-package"
+          git clone "ssh://aur@aur.archlinux.org/${AUR_PACKAGE}.git" "${AUR_DIR}"
+          cd "${AUR_DIR}"
+
+          # Create source tarball URL
+          SOURCE_URL="https://github.com/imz87/nautilus-paste-shortcut/archive/refs/tags/v${VERSION}.tar.gz"
+
+          # Generate SHA256 checksum
+          SHA256=$(curl -sL "${SOURCE_URL}" | sha256sum | cut -d' ' -f1)
+
+          # Update PKGBUILD
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          sed -i "s|source=.*|source=(\"${SOURCE_URL}\")|" PKGBUILD
+          sed -i "s|sha256sums=.*|sha256sums=('${SHA256}')|" PKGBUILD
+
+          # Update .SRCINFO
+          makepkg --printsrcinfo > .SRCINFO
+
+          # Commit and push
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add PKGBUILD .SRCINFO
+          git commit -m "Update to version ${VERSION}"
+          git push origin master
+
+          echo "Published to AUR: ${AUR_PACKAGE}"
+          echo "Monitor at: https://aur.archlinux.org/${AUR_PACKAGE}"
+
+      - name: Dry run summary
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == 'true'
+        run: |
+          echo "=== DRY RUN MODE ==="
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          echo "AUR package: nautilus-paste-shortcut"
+          echo "Version: ${VERSION}"
+          echo ""
+          echo "To publish manually:"
+          echo "  git clone ssh://aur@aur.archlinux.org/nautilus-paste-shortcut.git"
+          echo "  # Update PKGBUILD with pkgver=${VERSION}"
+          echo "  # makepkg --printsrcinfo > .SRCINFO"
+          echo "  # git add PKGBUILD .SRCINFO && git commit -m 'Update to ${VERSION}' && git push"
+          echo ""
+          echo "Or re-run this workflow with dry_run=false"
+
+  publish-copr:
+    name: Publish to COPR
+    needs: [prepare-release, create-tag, release]
+    if: needs.prepare-release.outputs.should_release == 'true' && needs.prepare-release.outputs.is_release_branch == 'true'
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+    permissions:
+      contents: read
+    steps:
+      - name: Install packaging tools
+        run: |
+          dnf install -y rpm-build rpmdevtools copr-cli git
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.prepare-release.outputs.version }}
+          fetch-depth: 0
+
+      - name: Mark workspace as safe for Git
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Set up RPM build environment
+        run: |
+          rpmdev-setuptree
+
+      - name: Create source tarball
+        run: |
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
+              HEAD -o "${HOME}/rpmbuild/SOURCES/nautilus-paste-shortcut-${VERSION}.tar.gz"
+
+      - name: Update spec file version
+        run: |
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/nautilus-paste-shortcut.spec
+          cp packaging/nautilus-paste-shortcut.spec "${HOME}/rpmbuild/SPECS/"
+
+      - name: Build source RPM
+        run: |
+          rpmbuild -bs "${HOME}/rpmbuild/SPECS/nautilus-paste-shortcut.spec"
+          SRPM=$(find "${HOME}/rpmbuild/SRPMS" -name "*.src.rpm" | head -1)
+          echo "SRPM=${SRPM}" >> "$GITHUB_ENV"
+          echo "Built SRPM: ${SRPM}"
+
+      - name: Configure COPR credentials
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          COPR_CONFIG: ${{ secrets.COPR_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$COPR_CONFIG" ]; then
+            echo "::error::COPR_API_TOKEN secret is empty."
+            echo "Copy the full config block from: https://copr.fedorainfracloud.org/api/"
+            exit 1
+          fi
+          if ! printf '%s' "$COPR_CONFIG" | grep -q '^\[copr-cli\]'; then
+            echo "::error::COPR_API_TOKEN must contain the full COPR config block, starting with [copr-cli]."
+            echo "Copy the full config block from: https://copr.fedorainfracloud.org/api/, not just the token value."
+            exit 1
+          fi
+          mkdir -p "${HOME}/.config"
+          printf '%s' "$COPR_CONFIG" > "${HOME}/.config/copr"
+          chmod 600 "${HOME}/.config/copr"
+
+      - name: Submit build to COPR
+        if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
+        env:
+          COPR_OWNER: imz87
+          COPR_PROJECT: nautilus-paste-shortcut
+        run: |
+          set -euo pipefail
+          echo "Submitting to COPR: ${COPR_OWNER}/${COPR_PROJECT}"
+          copr-cli build \
+            --chroot fedora-rawhide-x86_64 \
+            --chroot fedora-44-x86_64 \
+            --chroot fedora-43-x86_64 \
+            "${COPR_OWNER}/${COPR_PROJECT}" \
+            "${SRPM}"
+          echo "Build submitted successfully!"
+          echo "Monitor at: https://copr.fedorainfracloud.org/coprs/${COPR_OWNER}/${COPR_PROJECT}/"
+
+      - name: Dry run summary
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == 'true'
+        run: |
+          echo "=== DRY RUN MODE ==="
+          echo "SRPM built: ${SRPM}"
+          echo ""
+          echo "To submit manually:"
+          echo "  copr-cli build --chroot fedora-rawhide-x86_64 imz87/nautilus-paste-shortcut ${SRPM}"
+          echo ""
+          echo "Or re-run this workflow with dry_run=false"

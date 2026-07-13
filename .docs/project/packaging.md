@@ -76,9 +76,55 @@ nautilus -q
 COPR packages can be built from the same spec file. To publish to COPR:
 
 1. Create a COPR account at `copr.fedorainfracloud.org`
-2. Add a new project
-3. Upload the spec file and source tarball
-4. Enable builds for desired Fedora releases
+2. Create a new project at `https://copr.fedorainfracloud.org/coprs/<username>/new-visit/`
+3. Get your API token at `https://copr.fedorainfracloud.org/api/`
+4. Add the full COPR config block as a GitHub repository secret named `COPR_API_TOKEN`
+5. Run the `publish-copr.yml` workflow via GitHub Actions
+
+**Required GitHub Actions Secrets:**
+
+| Secret Name | Description |
+|---|---|
+| `COPR_API_TOKEN` | Full config block from `https://copr.fedorainfracloud.org/api/`, starting with `[copr-cli]` |
+| `OPENSUSE_OBS_USERNAME` | OBS username for openSUSE publishing |
+| `OPENSUSE_OBS_PASSWORD` | OBS password for openSUSE publishing |
+| `ARCH_AUR_SSH_KEY` | SSH private key for AUR (currently unused while AUR publishing is disabled) |
+
+**Manual COPR build:**
+
+```bash
+# Install tools
+sudo dnf install rpm-build rpmdevtools copr-cli
+
+# Add package to COPR (one-time setup)
+copr-cli add-package-scm imz87/nautilus-paste-shortcut \
+    --name nautilus-paste-shortcut \
+    --type git \
+    --clone-url https://github.com/imz87/nautilus-paste-shortcut.git \
+    --commit main \
+    --spec packaging/nautilus-paste-shortcut.spec \
+    --method make_srpm
+
+# Build source RPM
+VERSION=$(cat VERSION)
+rpmdev-setuptree
+git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
+    HEAD -o ~/rpmbuild/SOURCES/nautilus-paste-shortcut-${VERSION}.tar.gz
+sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/nautilus-paste-shortcut.spec
+cp packaging/nautilus-paste-shortcut.spec ~/rpmbuild/SPECS/
+rpmbuild -bs ~/rpmbuild/SPECS/nautilus-paste-shortcut.spec
+
+# Submit build to COPR
+copr-cli build --chroot fedora-rawhide-x86_64 --chroot fedora-44-x86_64 --chroot fedora-43-x86_64 imz87/nautilus-paste-shortcut \
+    ~/rpmbuild/SRPMS/nautilus-paste-shortcut-*.src.rpm
+```
+
+**Users can then install from COPR:**
+
+```bash
+sudo dnf copr enable imz87/nautilus-paste-shortcut
+sudo dnf install nautilus-paste-shortcut
+```
 
 ## Cross-Distro Support
 
@@ -206,10 +252,10 @@ gpg --verify package.rpm.asc package.rpm
 
 Native package repository publishing is separate work:
 
-- **Fedora/RHEL family**: COPR repository (planned)
-- **Debian/Ubuntu family**: PPA or apt repository (planned)
-- **Arch family**: AUR package recipe (planned)
-- **openSUSE family**: OBS publishing (planned)
+- **Fedora/RHEL family**: COPR repository (implemented)
+- **Debian/Ubuntu family**: PPA or apt repository (implemented)
+- **openSUSE family**: OBS publishing (implemented)
+- **Arch family**: AUR package recipe (temporarily disabled until the AUR account/package is ready)
 
 Repository publishing requires package signing, credentials, and different automation than release artifact builds. The signing infrastructure established in this task enables future repository publishing.
 
@@ -233,21 +279,15 @@ The first native repository target is PPA for Debian/Ubuntu-family distribution.
 | Secret Name | Description |
 |---|---|
 | `PPA_LAUNCHPAD_USERNAME` | Launchpad username for PPA access |
-| `PPA_GPG_PRIVATE_KEY` | GPG private key for package signing |
-| `PPA_GPG_PASSPHRASE` | Passphrase for the GPG key (can be empty) |
-
-**Required GitHub Environment:**
-
-| Environment Name | Description |
-|---|---|
-| `ppa-publish` | Protected environment for PPA publication |
+| `GPG_PRIVATE_KEY` | GPG private key for package signing |
+| `GPG_PASSPHRASE` | Passphrase for the GPG key (can be empty) |
 
 ### PPA Setup Requirements
 
 1. **Launchpad account:** Create an account at `launchpad.net`
 2. **PPA creation:** Create a PPA in Launchpad settings
 3. **GPG key:** Generate a GPG key for package signing
-4. **GitHub secrets:** Configure the required secrets and environment
+4. **GitHub secrets:** Configure the required secrets
 
 ### PPA Publishing Workflow
 
@@ -262,10 +302,10 @@ The workflow runs on:
 4. Upload to PPA using `dput`
 
 **Safety features:**
-- Requires GitHub Environment approval (`ppa-publish`)
 - Dry-run mode for testing
 - Tag validation against VERSION file
 - GPG signing for package authenticity
+- Secret validation before upload
 
 ### PPA Installation
 
@@ -296,9 +336,7 @@ sudo apt install nautilus-paste-shortcut
 
 ### Future Repository Targets
 
-- **Fedora/RHEL family**: COPR repository (planned)
-- **Arch family**: AUR package recipe (planned)
-- **openSUSE family**: OBS publishing (planned)
+No remaining targets — all major distros are implemented.
 
 Each ecosystem has different credentials, review expectations, metadata rules, and automation constraints. The PPA publishing infrastructure serves as a template for future repository targets.
 
