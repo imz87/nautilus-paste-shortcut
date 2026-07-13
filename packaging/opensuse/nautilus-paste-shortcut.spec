@@ -40,6 +40,15 @@ install -m 0644 src/core_logic.py \
 %{_datadir}/nautilus-python/extensions/nautilus_paste_shortcut.py
 %{_datadir}/nautilus-python/extensions/core_logic.py
 
+%post
+echo ""
+echo "Restart Nautilus / GNOME Files for the extension to take effect:"
+echo ""
+echo "  nautilus -q"
+echo ""
+echo "Then reopen Files. The \"Paste Shortcut Here\" menu will appear in the context menu."
+echo ""
+
 %changelog
 * Thu Jul 09 2026 Iman <zolfaghari19@gmail.com> 0.1.0-1
 - Initial openSUSE RPM release

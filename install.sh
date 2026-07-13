@@ -59,5 +59,7 @@ mkdir -p "${target_dir}"
 install -m 0644 "${script_dir}/src/nautilus_paste_shortcut.py" "${target_dir}/nautilus_paste_shortcut.py"
 install -m 0644 "${script_dir}/src/core_logic.py" "${target_dir}/core_logic.py"
 
-printf 'Installed Nautilus extension to %s\n' "${target_dir}"
-printf 'Restart GNOME Files with: nautilus -q\n'
+printf 'Installed Nautilus extension to %s\n\n' "${target_dir}"
+printf 'Restart Nautilus / GNOME Files for the extension to take effect:\n\n'
+printf '  nautilus -q\n\n'
+printf 'Then reopen Files. The "Paste Shortcut Here" menu will appear in the context menu.\n'

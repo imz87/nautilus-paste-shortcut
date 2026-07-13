@@ -82,6 +82,8 @@ Support on non-Fedora distributions is conditional and depends on having compati
 
 ## Install
 
+> **Important:** After installing by any method, restart Nautilus / GNOME Files for the extension to take effect. Run `nautilus -q` and reopen Files.
+
 ### Local Install
 
 From this repository:
@@ -96,13 +98,13 @@ The script installs the extension files into:
 ~/.local/share/nautilus-python/extensions/
 ```
 
-Then restart Nautilus:
+**Restart Nautilus / GNOME Files for the extension to take effect:**
 
 ```bash
 nautilus -q
 ```
 
-Open GNOME Files again after that.
+Then reopen Files. The "Paste Shortcut Here" menu will appear in the context menu.
 
 ### RPM Install
 
@@ -130,11 +132,13 @@ The RPM installs the extension files to the system-wide path:
 /usr/share/nautilus-python/extensions/
 ```
 
-After installation, restart Nautilus:
+**Restart Nautilus / GNOME Files for the extension to take effect:**
 
 ```bash
 nautilus -q
 ```
+
+Then reopen Files. The "Paste Shortcut Here" menu will appear in the context menu.
 
 ### COPR Install (Fedora)
 
@@ -145,11 +149,13 @@ sudo dnf copr enable imz87/nautilus-paste-shortcut
 sudo dnf install nautilus-paste-shortcut
 ```
 
-This provides automatic updates through `dnf`. After installation, restart Nautilus:
+This provides automatic updates through `dnf`. **Restart Nautilus / GNOME Files for the extension to take effect:**
 
 ```bash
 nautilus -q
 ```
+
+Then reopen Files. The "Paste Shortcut Here" menu will appear in the context menu.
 
 **Uninstalling from COPR:**
 
@@ -167,7 +173,7 @@ Remove the RPM package:
 sudo dnf remove nautilus-paste-shortcut
 ```
 
-After removal, restart Nautilus so the extension is no longer loaded:
+After removal, **restart Nautilus / GNOME Files so the extension is no longer loaded:**
 
 ```bash
 nautilus -q
@@ -207,10 +213,11 @@ openSUSE:
 sudo zypper install ./nautilus-paste-shortcut-*.rpm
 ```
 
-After installation, restart Nautilus:
+After installation, **restart Nautilus / GNOME Files for the extension to take effect:**
 ```bash
 nautilus -q
 ```
+Then reopen Files. The "Paste Shortcut Here" menu will appear in the context menu.
 
 **Important:** Release artifacts are not the same as adding an apt/dnf/pacman/zypper repository. They do not provide automatic updates. You must download and install new versions manually from GitHub Releases.
 
@@ -260,10 +267,11 @@ sudo apt update
 sudo apt install nautilus-paste-shortcut
 ```
 
-After installation, restart Nautilus:
+After installation, **restart Nautilus / GNOME Files for the extension to take effect:**
 ```bash
 nautilus -q
 ```
+Then reopen Files. The "Paste Shortcut Here" menu will appear in the context menu.
 
 **Uninstalling from PPA:**
 
@@ -289,7 +297,7 @@ If the clipboard does not contain copied local files, the menu item is hidden. A
 
 ## Uninstall
 
-Remove the installed extension files and restart Nautilus:
+Remove the installed extension files and restart Nautilus / GNOME Files:
 
 ```bash
 rm ~/.local/share/nautilus-python/extensions/nautilus_paste_shortcut.py \
