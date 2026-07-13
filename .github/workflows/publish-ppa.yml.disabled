@@ -1,0 +1,115 @@
+name: Publish to PPA
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (do not publish)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      target_series:
+        description: 'Ubuntu series to publish to (e.g., noble, jammy)'
+        required: false
+        default: 'noble'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish-ppa:
+    name: Publish to PPA
+    runs-on: ubuntu-latest
+    environment: ppa-publish
+    if: >
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    steps:
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            # Extract version from the completed workflow's tag
+            TAG="${{ github.event.workflow_run.head_branch }}"
+            if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              VERSION="${TAG#v}"
+            else
+              echo "::error::Could not determine version from workflow run"
+              exit 1
+            fi
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "Version: ${VERSION}"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: v${{ steps.version.outputs.version }}
+          fetch-depth: 0
+
+      - name: Download signed artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: signed-artifacts
+          path: artifacts
+
+      - name: Import GPG key
+        id: import-gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+      - name: Install dput
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dput
+
+      - name: Configure dput
+        run: |
+          cat > ~/.dput.cf << 'EOF'
+          [ppa]
+          login = anonymous
+          method = ftp
+          host = ppa.launchpad.net
+          incoming = ~${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa/ubuntu
+          EOF
+
+      - name: Dry run (if enabled)
+        if: inputs.dry_run == 'true'
+        run: |
+          echo "=== DRY RUN MODE ==="
+          echo "Would publish to PPA: ${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa"
+          echo "Target series: ${{ inputs.target_series || 'noble' }}"
+          echo "Files to upload:"
+          ls -la artifacts/source-package/*.changes artifacts/source-package/*.dsc 2>/dev/null || echo "No source package files found"
+          echo ""
+          echo "=== DRY RUN COMPLETE ==="
+
+      - name: Publish to PPA (if not dry run)
+        if: inputs.dry_run != 'true'
+        run: |
+          SERIES="${{ inputs.target_series || 'noble' }}"
+          echo "Publishing to PPA for series: $SERIES"
+          dput ppa artifacts/source-package/nautilus-paste-shortcut_*.changes
+
+      - name: Verify publication
+        if: inputs.dry_run != 'true'
+        run: |
+          echo "=== Publication Status ==="
+          echo "Package published to PPA: ${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa"
+          echo "Users can now install with:"
+          echo "  sudo add-apt-repository ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa"
+          echo "  sudo apt update"
+          echo "  sudo apt install nautilus-paste-shortcut"
