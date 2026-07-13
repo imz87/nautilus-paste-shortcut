@@ -17,3 +17,13 @@ package() {
     install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
     install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 }
+
+post_install() {
+    echo ""
+    echo "Restart Nautilus / GNOME Files for the extension to take effect:"
+    echo ""
+    echo "  nautilus -q"
+    echo ""
+    echo "Then reopen Files. The \"Paste Shortcut Here\" menu will appear in the context menu."
+    echo ""
+}

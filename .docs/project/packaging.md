@@ -56,6 +56,20 @@ sudo dnf remove nautilus-paste-shortcut
 nautilus -q
 ```
 
+### Post-Install Restart Reminder
+
+All installation paths print a visible reminder to restart Nautilus / GNOME Files after installation. This is informational only — the project never auto-restarts Nautilus or closes existing Files windows.
+
+| Installation path | Mechanism | Where the reminder appears |
+|---|---|---|
+| Local install (`install.sh`) | Shell `printf` after file copy | Terminal output after successful install |
+| Fedora/RPM (`dnf install`) | `%post` scriptlet in spec | Package manager output after install |
+| openSUSE RPM (`zypper install`) | `%post` scriptlet in spec | Package manager output after install |
+| Debian/Ubuntu (`.deb`) | `postinst` maintainer script | Package manager output after install |
+| Arch Linux (`pacman -U`) | `post_install()` hook in PKGBUILD | Package manager output after install |
+
+The reminder tells the user to run `nautilus -q` and reopen Files so the extension appears in the context menu.
+
 ### Install Paths
 
 - Extension file: `/usr/share/nautilus-python/extensions/nautilus_paste_shortcut.py`
@@ -131,6 +145,8 @@ sudo dnf install nautilus-paste-shortcut
 The local installer (`install.sh`) works on any Linux distribution with a compatible Nautilus 4 desktop. The installer checks for the Nautilus Python extension loader before copying files.
 
 Package names vary by distribution. The `nautilus-python` package (or equivalent) must provide `libnautilus-python.so`. See `README.md` for distro-specific install commands.
+
+All installation paths (local and packaged) print a post-install reminder to restart Nautilus / GNOME Files. See [Post-Install Restart Reminder](#post-install-restart-reminder) for details.
 
 ## Release Artifact Packaging
 

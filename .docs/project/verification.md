@@ -157,6 +157,43 @@ rpm --import nautilus-paste-shortcut-signing-key.asc
 rpm --checksig package.rpm
 ```
 
+### Post-Install Restart Reminder
+
+Verify that all installation paths print a clear restart reminder after install:
+
+**Local install (`install.sh`):**
+```bash
+# Run install.sh and check output mentions "nautilus -q"
+./install.sh 2>&1 | grep -q "nautilus -q"
+```
+
+**RPM (Fedora/openSUSE):**
+```bash
+# After building, inspect the spec for %post scriptlet
+grep -A5 '%post' packaging/nautilus-paste-shortcut.spec
+grep -A5 '%post' packaging/opensuse/nautilus-paste-shortcut.spec
+# After installing the RPM, the package manager should print the reminder
+```
+
+**Debian/Ubuntu:**
+```bash
+# After building, inspect the postinst script
+cat packaging/debian/postinst
+# After installing the .deb, the package manager should print the reminder
+```
+
+**Arch Linux:**
+```bash
+# After building, inspect the PKGBUILD for post_install()
+grep -A10 'post_install' packaging/arch/PKGBUILD
+# After installing with pacman, the package manager should print the reminder
+```
+
+The reminder must:
+- Tell the user to run `nautilus -q`
+- Tell the user to reopen Files
+- Not auto-restart Nautilus or close existing Files windows
+
 ### PPA/apt Repository Verification
 
 Verify PPA publication and installation:
