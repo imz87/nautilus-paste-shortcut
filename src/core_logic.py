@@ -1,4 +1,4 @@
-"""Core shortcut logic for Nautilus Paste Shortcut.
+"""Core logic for Paste Links.
 
 This module contains pure logic that can be imported and tested
 without GTK, GDK, or Nautilus bindings.
@@ -9,8 +9,8 @@ import os
 from gi.repository import Gio
 
 
-class PasteShortcutError(RuntimeError):
-    """Raised when the paste shortcut operation fails."""
+class PasteLinksError(RuntimeError):
+    """Raised when the paste links operation fails."""
 
 
 def parse_payload(payload):
@@ -23,11 +23,11 @@ def parse_payload(payload):
         Tuple of (operation, list_of_source_uris).
 
     Raises:
-        PasteShortcutError: If the payload is empty.
+        PasteLinksError: If the payload is empty.
     """
     lines = [line.strip() for line in payload.splitlines() if line.strip()]
     if not lines:
-        raise PasteShortcutError("Clipboard is empty.")
+        raise PasteLinksError("Clipboard is empty.")
     return lines[0], lines[1:]
 
 
@@ -79,7 +79,7 @@ def available_link_name(base_name, destination_dir):
     return candidate
 
 
-def create_shortcut(source_path, destination_dir):
+def create_symlink(source_path, destination_dir):
     """Create a symbolic link for source_path in destination_dir.
 
     Args:
@@ -94,8 +94,8 @@ def create_shortcut(source_path, destination_dir):
     os.symlink(source_path, link_path)
 
 
-def paste_shortcuts(payload, destination_uri):
-    """Execute the paste shortcut workflow.
+def paste_links(payload, destination_uri):
+    """Execute the paste links workflow.
 
     Parses the clipboard payload, validates sources, resolves paths,
     and creates symbolic links for each valid source.
@@ -108,17 +108,17 @@ def paste_shortcuts(payload, destination_uri):
         A message string if there were warnings, or None on success.
 
     Raises:
-        PasteShortcutError: On invalid clipboard content or destination.
+        PasteLinksError: On invalid clipboard content or destination.
     """
     operation, source_uris = parse_payload(payload)
     if operation != "copy":
-        raise PasteShortcutError(
+        raise PasteLinksError(
             "Clipboard contains cut items. Copy files with Ctrl+C first."
         )
 
     destination_path = local_path_from_uri(destination_uri)
     if not destination_path or not os.path.isdir(destination_path):
-        raise PasteShortcutError("Shortcuts can only be pasted into a local folder.")
+        raise PasteLinksError("Symlinks can only be pasted into a local folder.")
 
     local_sources = []
     skipped = []
@@ -131,21 +131,21 @@ def paste_shortcuts(payload, destination_uri):
         local_sources.append(local_path)
 
     if not local_sources:
-        raise PasteShortcutError(
+        raise PasteLinksError(
             "Clipboard does not contain any supported local files or folders."
         )
 
     failures = []
     for source_path in local_sources:
         try:
-            create_shortcut(source_path, destination_path)
+            create_symlink(source_path, destination_path)
         except OSError as error:
             failures.append(f"{os.path.basename(source_path)}: {error}")
 
     if failures and skipped:
-        return join_lines(["Some shortcuts were not created.", *failures, *skipped])
+        return join_lines(["Some symlinks were not created.", *failures, *skipped])
     if failures:
-        return join_lines(["Some shortcuts were not created.", *failures])
+        return join_lines(["Some symlinks were not created.", *failures])
     if skipped:
         return join_lines(["Some items were skipped.", *skipped])
     return None

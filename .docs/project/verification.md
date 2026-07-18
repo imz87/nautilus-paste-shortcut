@@ -6,7 +6,7 @@ Use this to choose checks for a change:
 
 | Change type | Default check |
 |---|---|
-| Python source change | `python3 -m py_compile src/nautilus_paste_shortcut.py` |
+| Python source change | `python3 -m py_compile src/paste_links.py` |
 | Install script change | `bash -n install.sh` |
 | Documentation-only change | Manual read-through of the updated instructions |
 
@@ -19,7 +19,7 @@ Manual checks when needed:
 Use these checks for normal changes:
 
 ```bash
-python3 -m py_compile src/nautilus_paste_shortcut.py
+python3 -m py_compile src/paste_links.py
 bash -n install.sh
 python3 -m pytest tests/ -v
 ```
@@ -37,7 +37,7 @@ GitHub Actions CI runs these checks automatically on push and pull request acros
 Each matrix job runs:
 
 1. `bash -n install.sh` -- shell syntax validation
-2. `python3 -m py_compile src/nautilus_paste_shortcut.py` -- Python syntax check (only when the Nautilus typelib is available)
+2. `python3 -m py_compile src/paste_links.py` -- Python syntax check (only when the Nautilus typelib is available)
 3. `python3 -m pytest tests/ -v` -- pure unit tests
 
 CI success means the project passes automated static and unit checks in distro containers. It does **not** guarantee the Nautilus context menu appears on every desktop. Container CI cannot verify Wayland clipboard behavior or Nautilus menu integration.
@@ -64,14 +64,14 @@ rpmdev-setuptree
 
 # Create source tarball
 VERSION=$(cat VERSION)
-git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
-    HEAD -o ~/rpmbuild/SOURCES/nautilus-paste-shortcut-${VERSION}.tar.gz
+git archive --format=tar.gz --prefix="paste-links-${VERSION}/" \
+    HEAD -o ~/rpmbuild/SOURCES/paste-links-${VERSION}.tar.gz
 
 # Build RPM
-rpmbuild -ba packaging/nautilus-paste-shortcut.spec
+rpmbuild -ba packaging/paste-links.spec
 
 # Verify RPM contents
-rpm -qlp ~/rpmbuild/RPMS/noarch/nautilus-paste-shortcut-*.rpm
+rpm -qlp ~/rpmbuild/RPMS/noarch/paste-links-*.rpm
 ```
 
 ### DEB (Ubuntu/Debian)
@@ -84,7 +84,7 @@ sudo apt install debhelper python3-all dh-python
 dpkg-buildpackage -us -uc -b
 
 # Verify DEB contents
-dpkg-deb -c ../nautilus-paste-shortcut_*.deb
+dpkg-deb -c ../paste-links_*.deb
 ```
 
 ### Arch Linux
@@ -98,7 +98,7 @@ cd packaging/arch
 makepkg -s
 
 # Verify package contents
-tar -tf nautilus-paste-shortcut-*.pkg.tar.zst
+tar -tf paste-links-*.pkg.tar.zst
 ```
 
 ### openSUSE
@@ -112,14 +112,14 @@ rpmdev-setuptree
 
 # Create source tarball
 VERSION=$(cat VERSION)
-git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
-    HEAD -o ~/rpmbuild/SOURCES/nautilus-paste-shortcut-${VERSION}.tar.gz
+git archive --format=tar.gz --prefix="paste-links-${VERSION}/" \
+    HEAD -o ~/rpmbuild/SOURCES/paste-links-${VERSION}.tar.gz
 
 # Build RPM
-rpmbuild -ba packaging/opensuse/nautilus-paste-shortcut.spec
+rpmbuild -ba packaging/opensuse/paste-links.spec
 
 # Verify RPM contents
-rpm -qlp ~/rpmbuild/RPMS/noarch/nautilus-paste-shortcut-*.rpm
+rpm -qlp ~/rpmbuild/RPMS/noarch/paste-links-*.rpm
 ```
 
 ### GitHub Actions Workflow
@@ -140,7 +140,7 @@ Verify that release artifacts are signed correctly:
 # Download a package and its .asc signature from GitHub Releases
 
 # Import the signing public key (one-time setup)
-gpg --import nautilus-paste-shortcut-signing-key.asc
+gpg --import paste-links-signing-key.asc
 
 # Verify GPG signature
 gpg --verify package.rpm.asc package.rpm
@@ -157,7 +157,7 @@ rpm -qip package.rpm | grep -i signature
 ```
 
 **Expected output:**
-- `gpg: Good signature from "Nautilus Paste Shortcut Release Signing <zolfaghari19@gmail.com>"`
+- `gpg: Good signature from "Paste Links Release Signing <zolfaghari19@gmail.com>"`
 - RPM: `package.rpm: digests SIGNATURE OK`
 
 **Troubleshooting:**
@@ -167,7 +167,7 @@ rpm -qip package.rpm | grep -i signature
 gpg --keyserver keyserver.ubuntu.com --recv-keys <KEY_ID>
 
 # If RPM reports "NOT OK"
-rpm --import nautilus-paste-shortcut-signing-key.asc
+rpm --import paste-links-signing-key.asc
 rpm --checksig package.rpm
 ```
 
@@ -214,23 +214,23 @@ Verify PPA publication and installation:
 
 ```bash
 # Check if PPA is configured
-apt-cache policy nautilus-paste-shortcut
+apt-cache policy paste-links
 
 # Verify package version from PPA
-apt-cache show nautilus-paste-shortcut | grep Version
+apt-cache show paste-links | grep Version
 
 # Test PPA publication (dry run)
 # This is done in the workflow - verify locally:
 dpkg-buildpackage -us -uc -S
-dput --dry-run ppa nautilus-paste-shortcut_*.changes
+dput --dry-run ppa paste-links_*.changes
 
 # Verify package installation from PPA
-sudo add-apt-repository ppa:imz87/nautilus-paste-shortcut
+sudo add-apt-repository ppa:imz87/paste-links
 sudo apt update
-apt-cache policy nautilus-paste-shortcut
+apt-cache policy paste-links
 
 # Check package signatures from PPA
-apt-key list | grep -A5 "nautilus-paste-shortcut"
+apt-key list | grep -A5 "paste-links"
 ```
 
 **Expected output:**
@@ -242,8 +242,8 @@ apt-key list | grep -A5 "nautilus-paste-shortcut"
 
 ```bash
 # If PPA is not found
-sudo add-apt-repository --remove ppa:imz87/nautilus-paste-shortcut
-sudo add-apt-repository ppa:imz87/nautilus-paste-shortcut
+sudo add-apt-repository --remove ppa:imz87/paste-links
+sudo add-apt-repository ppa:imz87/paste-links
 
 # If package signature verification fails
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys <KEY_ID>
@@ -254,8 +254,8 @@ cat VERSION  # Should match PPA version
 
 ## Manual Checks
 
-1. Copy one file in GNOME Files and run `Paste Shortcut` in another folder.
-2. Copy one folder in GNOME Files and run `Paste Shortcut` in another folder.
+1. Copy one file in GNOME Files and run `Paste Symlink Here` in another folder.
+2. Copy one folder in GNOME Files and run `Paste Symlink Here` in another folder.
 3. Copy multiple items and verify one symlink is created per item.
 4. Repeat with an existing destination name and verify suffix handling.
 5. Press `Ctrl+X` and verify the menu item is hidden.

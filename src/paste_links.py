@@ -11,19 +11,19 @@ gi.require_version("Nautilus", "4.0")
 from gi.repository import Gdk, GLib, GObject, Gtk, Nautilus
 
 from core_logic import (
-    PasteShortcutError,
+    PasteLinksError,
     local_path_from_uri,
     normalize_clipboard_text,
-    paste_shortcuts,
+    paste_links,
 )
 
 
 TARGET_MIME_TYPE = "x-special/gnome-copied-files"
-MENU_LABEL = "Paste Shortcut"
-DIALOG_TITLE = "Paste Shortcut"
+MENU_LABEL = "Paste Symlink Here"
+DIALOG_TITLE = "Paste Symlink Here"
 
 
-class PasteShortcutExtension(GObject.GObject, Nautilus.MenuProvider):
+class PasteLinksExtension(GObject.GObject, Nautilus.MenuProvider):
     def get_background_items(self, current_folder):
         # Nautilus calls menu providers repeatedly, so keep this path
         # defensive and cheap: log unexpected failures and hide the item.
@@ -36,7 +36,7 @@ class PasteShortcutExtension(GObject.GObject, Nautilus.MenuProvider):
                 return []
 
             item = Nautilus.MenuItem(
-                name="PasteShortcutExtension::PasteShortcutHere",
+                name="PasteLinksExtension::PasteSymlinkHere",
                 label=MENU_LABEL,
                 tip="Create symbolic links from copied files",
             )
@@ -77,7 +77,7 @@ class PasteShortcutExtension(GObject.GObject, Nautilus.MenuProvider):
             clipboard.read_text_async(None, self._on_clipboard_text_read, destination_uri)
         except Exception as error:
             self._report_exception("_on_activate", error)
-            self._show_error("Failed to start the paste shortcut action.", str(error))
+            self._show_error("Failed to start the paste symlink action.", str(error))
 
     def _on_clipboard_text_read(self, clipboard, result, destination_uri):
         try:
@@ -97,13 +97,13 @@ class PasteShortcutExtension(GObject.GObject, Nautilus.MenuProvider):
         payload = normalize_clipboard_text(payload)
 
         try:
-            message = paste_shortcuts(payload, destination_uri)
-        except PasteShortcutError as error:
+            message = paste_links(payload, destination_uri)
+        except PasteLinksError as error:
             self._show_error(str(error))
             return
         except Exception as error:
-            self._report_exception("paste_shortcuts_from_text", error)
-            self._show_error("Unexpected error while creating shortcuts.", str(error))
+            self._report_exception("paste_links_from_text", error)
+            self._show_error("Unexpected error while creating symlinks.", str(error))
             return
 
         if message:

@@ -13,14 +13,14 @@ import pytest
 # core_logic imports Gio at module level, which requires GObject.
 # On Fedora with python3-gobject installed, this works fine.
 from core_logic import (
-    PasteShortcutError,
+    PasteLinksError,
     available_link_name,
-    create_shortcut,
+    create_symlink,
     join_lines,
     link_variant,
     normalize_clipboard_text,
     parse_payload,
-    paste_shortcuts,
+    paste_links,
 )
 
 
@@ -55,11 +55,11 @@ class TestParsePayload:
         assert uris == ["file:///tmp/test.txt"]
 
     def test_empty_payload_raises_error(self):
-        with pytest.raises(PasteShortcutError, match="Clipboard is empty"):
+        with pytest.raises(PasteLinksError, match="Clipboard is empty"):
             parse_payload("")
 
     def test_whitespace_only_payload_raises_error(self):
-        with pytest.raises(PasteShortcutError, match="Clipboard is empty"):
+        with pytest.raises(PasteLinksError, match="Clipboard is empty"):
             parse_payload("   \n  \n  ")
 
     def test_no_uris_just_operation(self):
@@ -152,18 +152,18 @@ class TestAvailableLinkName:
 
 
 # ---------------------------------------------------------------------------
-# create_shortcut
+# create_symlink
 # ---------------------------------------------------------------------------
 
 
-class TestCreateShortcut:
+class TestCreateSymlink:
     def test_creates_working_symlink(self, tmp_path):
         source = tmp_path / "source.txt"
         source.touch()
         dest = tmp_path / "links"
         dest.mkdir()
 
-        create_shortcut(str(source), str(dest))
+        create_symlink(str(source), str(dest))
 
         link_path = dest / "source.txt"
         assert link_path.is_symlink()
@@ -176,7 +176,7 @@ class TestCreateShortcut:
         dest.mkdir()
         (dest / "test.txt").touch()  # existing file
 
-        create_shortcut(str(source), str(dest))
+        create_symlink(str(source), str(dest))
 
         link_path = dest / "test-link.txt"
         assert link_path.is_symlink()
@@ -187,7 +187,7 @@ class TestCreateShortcut:
         dest = tmp_path / "links"
         dest.mkdir()
 
-        create_shortcut(str(source), str(dest))
+        create_symlink(str(source), str(dest))
 
         link_path = dest / "my_folder"
         assert link_path.is_symlink()
@@ -195,11 +195,11 @@ class TestCreateShortcut:
 
 
 # ---------------------------------------------------------------------------
-# paste_shortcuts
+# paste_links
 # ---------------------------------------------------------------------------
 
 
-class TestPasteShortcuts:
+class TestPasteLinks:
     def test_two_local_files(self, tmp_path):
         src1 = tmp_path / "a.txt"
         src2 = tmp_path / "b.txt"
@@ -209,7 +209,7 @@ class TestPasteShortcuts:
         dest.mkdir()
 
         payload = f"copy\nfile://{src1}\nfile://{src2}"
-        message = paste_shortcuts(payload, f"file://{dest}")
+        message = paste_links(payload, f"file://{dest}")
 
         assert message is None
         assert (dest / "a.txt").is_symlink()
@@ -222,16 +222,16 @@ class TestPasteShortcuts:
         dest.mkdir()
 
         payload = f"cut\nfile://{src}"
-        with pytest.raises(PasteShortcutError, match="cut"):
-            paste_shortcuts(payload, f"file://{dest}")
+        with pytest.raises(PasteLinksError, match="cut"):
+            paste_links(payload, f"file://{dest}")
 
     def test_no_local_sources_raises_error(self, tmp_path):
         dest = tmp_path / "dest"
         dest.mkdir()
 
         payload = "copy\nsftp://remote/file.txt"
-        with pytest.raises(PasteShortcutError, match="supported local"):
-            paste_shortcuts(payload, f"file://{dest}")
+        with pytest.raises(PasteLinksError, match="supported local"):
+            paste_links(payload, f"file://{dest}")
 
     def test_unsupported_uri_skipped(self, tmp_path):
         src = tmp_path / "local.txt"
@@ -240,7 +240,7 @@ class TestPasteShortcuts:
         dest.mkdir()
 
         payload = f"copy\nfile://{src}\nsftp://remote/file.txt"
-        message = paste_shortcuts(payload, f"file://{dest}")
+        message = paste_links(payload, f"file://{dest}")
 
         assert message is not None
         assert "Skipped" in message or "skipped" in message
@@ -250,16 +250,16 @@ class TestPasteShortcuts:
         dest = tmp_path / "dest"
         dest.mkdir()
 
-        with pytest.raises(PasteShortcutError, match="empty"):
-            paste_shortcuts("", f"file://{dest}")
+        with pytest.raises(PasteLinksError, match="empty"):
+            paste_links("", f"file://{dest}")
 
     def test_destination_must_be_local_folder(self, tmp_path):
         src = tmp_path / "a.txt"
         src.touch()
 
         payload = f"copy\nfile://{src}"
-        with pytest.raises(PasteShortcutError, match="local folder"):
-            paste_shortcuts(payload, "sftp://remote/dest")
+        with pytest.raises(PasteLinksError, match="local folder"):
+            paste_links(payload, "sftp://remote/dest")
 
     def test_name_collision_resolved(self, tmp_path):
         src = tmp_path / "test.txt"
@@ -269,7 +269,7 @@ class TestPasteShortcuts:
         (dest / "test.txt").touch()
 
         payload = f"copy\nfile://{src}"
-        paste_shortcuts(payload, f"file://{dest}")
+        paste_links(payload, f"file://{dest}")
 
         assert (dest / "test-link.txt").is_symlink()
 
