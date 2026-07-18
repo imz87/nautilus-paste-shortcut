@@ -11,7 +11,7 @@
 The repository contains a `.spec` file for building RPM packages:
 
 ```text
-packaging/nautilus-paste-shortcut.spec
+packaging/paste-links.spec
 ```
 
 ### Build a Local RPM
@@ -28,18 +28,18 @@ packaging/nautilus-paste-shortcut.spec
 
 3. Create a source tarball:
    ```bash
-   git archive --format=tar.gz --prefix=nautilus-paste-shortcut-0.1.0/ \
-       HEAD -o ~/rpmbuild/SOURCES/nautilus-paste-shortcut-0.1.0.tar.gz
+   git archive --format=tar.gz --prefix=paste-links-0.1.0/ \
+       HEAD -o ~/rpmbuild/SOURCES/paste-links-0.1.0.tar.gz
    ```
 
 4. Build the RPM:
    ```bash
-   rpmbuild -ba packaging/nautilus-paste-shortcut.spec
+   rpmbuild -ba packaging/paste-links.spec
    ```
 
 5. Install the built RPM:
    ```bash
-   sudo dnf install ~/rpmbuild/RPMS/noarch/nautilus-paste-shortcut-0.1.0-1.*.rpm
+   sudo dnf install ~/rpmbuild/RPMS/noarch/paste-links-0.1.0-1.*.rpm
    ```
 
 6. Restart Nautilus:
@@ -52,7 +52,7 @@ packaging/nautilus-paste-shortcut.spec
 Remove the installed package and restart Nautilus so the extension is no longer loaded:
 
 ```bash
-sudo dnf remove nautilus-paste-shortcut
+sudo dnf remove paste-links
 nautilus -q
 ```
 
@@ -72,9 +72,9 @@ The reminder tells the user to run `nautilus -q` and reopen Files so the extensi
 
 ### Install Paths
 
-- Extension file: `/usr/share/nautilus-python/extensions/nautilus_paste_shortcut.py`
-- License: `/usr/share/licenses/nautilus-paste-shortcut/LICENSE`
-- Documentation: `/usr/share/doc/nautilus-paste-shortcut/README.md`
+- Extension file: `/usr/share/nautilus-python/extensions/paste_links.py`
+- License: `/usr/share/licenses/paste-links/LICENSE`
+- Documentation: `/usr/share/doc/paste-links/README.md`
 
 ### Package Dependencies
 
@@ -111,33 +111,33 @@ COPR packages can be built from the same spec file. To publish to COPR:
 sudo dnf install rpm-build rpmdevtools copr-cli
 
 # Add package to COPR (one-time setup)
-copr-cli add-package-scm imz87/nautilus-paste-shortcut \
-    --name nautilus-paste-shortcut \
+copr-cli add-package-scm imz87/paste-links \
+    --name paste-links \
     --type git \
-    --clone-url https://github.com/imz87/nautilus-paste-shortcut.git \
+    --clone-url https://github.com/imz87/paste-links.git \
     --commit main \
-    --spec packaging/nautilus-paste-shortcut.spec \
+    --spec packaging/paste-links.spec \
     --method make_srpm
 
 # Build source RPM
 VERSION=$(cat VERSION)
 rpmdev-setuptree
-git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
-    HEAD -o ~/rpmbuild/SOURCES/nautilus-paste-shortcut-${VERSION}.tar.gz
-sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/nautilus-paste-shortcut.spec
-cp packaging/nautilus-paste-shortcut.spec ~/rpmbuild/SPECS/
-rpmbuild -bs ~/rpmbuild/SPECS/nautilus-paste-shortcut.spec
+git archive --format=tar.gz --prefix="paste-links-${VERSION}/" \
+    HEAD -o ~/rpmbuild/SOURCES/paste-links-${VERSION}.tar.gz
+sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/paste-links.spec
+cp packaging/paste-links.spec ~/rpmbuild/SPECS/
+rpmbuild -bs ~/rpmbuild/SPECS/paste-links.spec
 
 # Submit build to COPR
-copr-cli build --chroot fedora-rawhide-x86_64 --chroot fedora-44-x86_64 --chroot fedora-43-x86_64 imz87/nautilus-paste-shortcut \
-    ~/rpmbuild/SRPMS/nautilus-paste-shortcut-*.src.rpm
+copr-cli build --chroot fedora-rawhide-x86_64 --chroot fedora-44-x86_64 --chroot fedora-43-x86_64 imz87/paste-links \
+    ~/rpmbuild/SRPMS/paste-links-*.src.rpm
 ```
 
 **Users can then install from COPR:**
 
 ```bash
-sudo dnf copr enable imz87/nautilus-paste-shortcut
-sudo dnf install nautilus-paste-shortcut
+sudo dnf copr enable imz87/paste-links
+sudo dnf install paste-links
 ```
 
 ## Cross-Distro Support
@@ -174,34 +174,34 @@ The release workflow builds these package formats:
 
 ### Packaging Files
 
-- **Fedora**: `packaging/nautilus-paste-shortcut.spec`
+- **Fedora**: `packaging/paste-links.spec`
 - **Ubuntu/Debian**: `packaging/debian/`
 - **Arch Linux**: `packaging/arch/PKGBUILD`
-- **openSUSE**: `packaging/opensuse/nautilus-paste-shortcut.spec`
+- **openSUSE**: `packaging/opensuse/paste-links.spec`
 
 ### Installation from Release Artifacts
 
 Fedora/RHEL:
 ```bash
-sudo dnf install ./nautilus-paste-shortcut-*.rpm
+sudo dnf install ./paste-links-*.rpm
 nautilus -q
 ```
 
 Ubuntu/Debian:
 ```bash
-sudo apt install ./nautilus-paste-shortcut_*.deb
+sudo apt install ./paste-links_*.deb
 nautilus -q
 ```
 
 Arch Linux:
 ```bash
-sudo pacman -U nautilus-paste-shortcut-*.pkg.tar.zst
+sudo pacman -U paste-links-*.pkg.tar.zst
 nautilus -q
 ```
 
 openSUSE:
 ```bash
-sudo zypper install ./nautilus-paste-shortcut-*.rpm
+sudo zypper install ./paste-links-*.rpm
 nautilus -q
 ```
 
@@ -215,7 +215,7 @@ nautilus -q
 
 Release artifacts are signed in GitHub Actions using GPG. The signing process:
 
-1. **Signing identity:** `Nautilus Paste Shortcut Release Signing <zolfaghari19@gmail.com>`
+1. **Signing identity:** `Paste Links Release Signing <zolfaghari19@gmail.com>`
 2. **Key management:** The GPG private key is stored as a GitHub Actions secret (`GPG_PRIVATE_KEY`) with an optional passphrase (`GPG_PASSPHRASE`).
 3. **Signing scope:** All release artifacts (RPM, DEB, Arch, source tarball) are signed with detached `.asc` signatures.
 4. **When signing occurs:** Only on tag-triggered releases (`v*` tags), not on pull requests or manual workflow dispatches.
@@ -245,7 +245,7 @@ Users can verify signatures using the public key:
 
 ```bash
 # Import the public key (one-time setup)
-gpg --import nautilus-paste-shortcut-signing-key.asc
+gpg --import paste-links-signing-key.asc
 
 # Verify a signature
 gpg --verify package.rpm.asc package.rpm
@@ -281,7 +281,7 @@ The first native repository target is PPA for Debian/Ubuntu-family distribution.
 
 ### PPA Publishing Strategy
 
-**Repository:** `ppa:imz87/nautilus-paste-shortcut`
+**Repository:** `ppa:imz87/paste-links`
 
 **Target distributions:**
 - Ubuntu Noble (24.04 LTS) - primary target
@@ -328,9 +328,9 @@ The workflow runs on:
 Users can install from the PPA:
 
 ```bash
-sudo add-apt-repository ppa:imz87/nautilus-paste-shortcut
+sudo add-apt-repository ppa:imz87/paste-links
 sudo apt update
-sudo apt install nautilus-paste-shortcut
+sudo apt install paste-links
 ```
 
 ### PPA Maintenance

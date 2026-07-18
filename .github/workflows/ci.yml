@@ -93,12 +93,12 @@ jobs:
             echo "available=true" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Nautilus typelib not available in this container; skipping py_compile for nautilus_paste_shortcut.py"
+            echo "::warning::Nautilus typelib not available in this container; skipping py_compile for paste_links.py"
           fi
 
-      - name: Python syntax check (nautilus_paste_shortcut.py)
+      - name: Python syntax check (paste_links.py)
         if: steps.typelib.outputs.available == 'true'
-        run: python3 -m py_compile src/nautilus_paste_shortcut.py
+        run: python3 -m py_compile src/paste_links.py
 
       - name: Run unit tests
         run: python3 -m pytest tests/ -v
@@ -157,14 +157,14 @@ jobs:
       - name: Create source tarball
         run: |
           VERSION="${{ needs.prepare-release.outputs.version }}"
-          git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
-              HEAD -o "nautilus-paste-shortcut-${VERSION}.tar.gz"
+          git archive --format=tar.gz --prefix="paste-links-${VERSION}/" \
+              HEAD -o "paste-links-${VERSION}.tar.gz"
 
       - name: Upload source tarball
         uses: actions/upload-artifact@v4
         with:
           name: source-tarball
-          path: nautilus-paste-shortcut-*.tar.gz
+          path: paste-links-*.tar.gz
 
   build-rpm-fedora:
     name: Build RPM (Fedora)
@@ -193,14 +193,14 @@ jobs:
       - name: Build RPM
         run: |
           VERSION="${{ needs.prepare-release.outputs.version }}"
-          sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/nautilus-paste-shortcut.spec
-          rpmbuild -ba packaging/nautilus-paste-shortcut.spec
+          sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/paste-links.spec
+          rpmbuild -ba packaging/paste-links.spec
 
       - name: Upload RPM
         uses: actions/upload-artifact@v4
         with:
           name: rpm-fedora
-          path: ~/rpmbuild/RPMS/noarch/nautilus-paste-shortcut-*.rpm
+          path: ~/rpmbuild/RPMS/noarch/paste-links-*.rpm
 
   build-rpm-opensuse:
     name: Build RPM (openSUSE)
@@ -229,14 +229,14 @@ jobs:
       - name: Build RPM
         run: |
           VERSION="${{ needs.prepare-release.outputs.version }}"
-          sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/opensuse/nautilus-paste-shortcut.spec
-          rpmbuild -ba packaging/opensuse/nautilus-paste-shortcut.spec
+          sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/opensuse/paste-links.spec
+          rpmbuild -ba packaging/opensuse/paste-links.spec
 
       - name: Upload RPM
         uses: actions/upload-artifact@v4
         with:
           name: rpm-opensuse
-          path: ~/rpmbuild/RPMS/noarch/nautilus-paste-shortcut-*.rpm
+          path: ~/rpmbuild/RPMS/noarch/paste-links-*.rpm
 
   build-deb:
     name: Build DEB (Ubuntu/Debian)
@@ -258,7 +258,7 @@ jobs:
         run: |
           VERSION="${{ needs.prepare-release.outputs.version }}"
           cp -r packaging/debian debian
-          sed -i "1s/^nautilus-paste-shortcut (.*/nautilus-paste-shortcut (${VERSION}-1) noble; urgency=low/" debian/changelog
+          sed -i "1s/^paste-links (.*/paste-links (${VERSION}-1) noble; urgency=low/" debian/changelog
           dpkg-buildpackage -us -uc -b
           mkdir -p output
           cp ../*.deb output/
@@ -296,7 +296,7 @@ jobs:
         run: |
           VERSION="${{ needs.prepare-release.outputs.version }}"
           mkdir -p /home/builder/build
-          cp /tmp/source-tarball/nautilus-paste-shortcut-*.tar.gz /home/builder/build/
+          cp /tmp/source-tarball/paste-links-*.tar.gz /home/builder/build/
           cp packaging/arch/PKGBUILD /home/builder/build/
           chown -R builder:builder /home/builder/build
           cd /home/builder/build
@@ -307,7 +307,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pkg-arch
-          path: /home/builder/build/nautilus-paste-shortcut-*.pkg.tar.zst
+          path: /home/builder/build/paste-links-*.pkg.tar.zst
 
   # Source package is separate from build-deb because it produces .changes/.dsc files
   # for PPA publishing, not a binary .deb for GitHub Releases.
@@ -332,7 +332,7 @@ jobs:
           VERSION="${{ needs.prepare-release.outputs.version }}"
           SERIES="${{ github.event_name == 'workflow_dispatch' && inputs.target_series || 'noble' }}"
           cp -r packaging/debian debian
-          sed -i "1s/^nautilus-paste-shortcut (.*/nautilus-paste-shortcut (${VERSION}-1) ${SERIES}; urgency=low/" debian/changelog
+          sed -i "1s/^paste-links (.*/paste-links (${VERSION}-1) ${SERIES}; urgency=low/" debian/changelog
           dpkg-buildpackage -us -uc -S
           mv ../*.changes ../*.dsc ../*.debian.tar.* ../*.orig.tar.* ../*.tar.* ../*.buildinfo . 2>/dev/null || true
 
@@ -493,7 +493,7 @@ jobs:
             exit 1
           fi
           echo "PPA owner: ${PPA_USERNAME}"
-          echo "PPA: ppa:${PPA_USERNAME}/nautilus-paste-shortcut"
+          echo "PPA: ppa:${PPA_USERNAME}/paste-links"
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -518,7 +518,7 @@ jobs:
           VERSION="${{ needs.prepare-release.outputs.version }}"
           SERIES="${{ inputs.target_series || 'noble' }}"
           cp -r packaging/debian debian
-          sed -i "1s/^nautilus-paste-shortcut (.*/nautilus-paste-shortcut (${VERSION}-1) ${SERIES}; urgency=low/" debian/changelog
+          sed -i "1s/^paste-links (.*/paste-links (${VERSION}-1) ${SERIES}; urgency=low/" debian/changelog
           dpkg-buildpackage -us -uc -S
 
       - name: Sign source package
@@ -532,14 +532,14 @@ jobs:
           login = anonymous
           method = ftp
           host = ppa.launchpad.net
-          incoming = ~${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ubuntu/nautilus-paste-shortcut
+          incoming = ~${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ubuntu/paste-links
           EOF
 
       - name: Dry run (if enabled)
         if: inputs.dry_run == 'true'
         run: |
           echo "=== DRY RUN MODE ==="
-          echo "Would publish to PPA: ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/nautilus-paste-shortcut"
+          echo "Would publish to PPA: ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/paste-links"
           echo "Target series: ${{ inputs.target_series || 'noble' }}"
           echo "Files to upload:"
           ls -la ../*.changes ../*.dsc 2>/dev/null || echo "No source package files found"
@@ -552,19 +552,19 @@ jobs:
       - name: Publish to PPA (if not dry run)
         if: inputs.dry_run != 'true'
         run: |
-          echo "Publishing to PPA: ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/nautilus-paste-shortcut"
+          echo "Publishing to PPA: ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/paste-links"
           dput ppa ../*.changes
 
       - name: Verify publication
         if: inputs.dry_run != 'true'
         run: |
           echo "=== Publication Status ==="
-          echo "Package published to PPA: ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/nautilus-paste-shortcut"
+          echo "Package published to PPA: ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/paste-links"
           echo ""
           echo "Users can now install with:"
-          echo "  sudo add-apt-repository ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/nautilus-paste-shortcut"
+          echo "  sudo add-apt-repository ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/paste-links"
           echo "  sudo apt update"
-          echo "  sudo apt install nautilus-paste-shortcut"
+          echo "  sudo apt install paste-links"
 
   publish-obs:
     name: Publish to OBS (openSUSE)
@@ -622,8 +622,8 @@ jobs:
       - name: Create source tarball
         run: |
           VERSION="${{ needs.prepare-release.outputs.version }}"
-          git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
-              HEAD -o "nautilus-paste-shortcut-${VERSION}.tar.gz"
+          git archive --format=tar.gz --prefix="paste-links-${VERSION}/" \
+              HEAD -o "paste-links-${VERSION}.tar.gz"
 
       - name: Test OBS connection
         if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
@@ -631,7 +631,7 @@ jobs:
           osc --version
           echo "HOME=${HOME}"
           ls -la "${OSC_CONFIG}"
-          osc --config "${OSC_CONFIG}" -A https://api.opensuse.org ls home:imz87:nautilus-paste-shortcut || {
+          osc --config "${OSC_CONFIG}" -A https://api.opensuse.org ls home:imz87:paste-links || {
             echo "::error::OBS authentication failed."
             echo "Check that OPENSUSE_OBS_USERNAME and OPENSUSE_OBS_PASSWORD are correct."
             exit 1
@@ -641,8 +641,8 @@ jobs:
       - name: Submit to OBS
         if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
         env:
-          OBS_PROJECT: home:imz87:nautilus-paste-shortcut
-          OBS_PACKAGE: nautilus-paste-shortcut
+          OBS_PROJECT: home:imz87:paste-links
+          OBS_PACKAGE: paste-links
         run: |
           set -euo pipefail
           VERSION="${{ needs.prepare-release.outputs.version }}"
@@ -655,10 +655,10 @@ jobs:
           osc --config "${OSC_CONFIG}" -A https://api.opensuse.org checkout "${OBS_PROJECT}" "${OBS_PACKAGE}"
           cd "${OBS_PROJECT}/${OBS_PACKAGE}"
 
-          rm -f nautilus-paste-shortcut-*.tar.gz
-          cp "${GITHUB_WORKSPACE}/nautilus-paste-shortcut-${VERSION}.tar.gz" .
-          cp "${GITHUB_WORKSPACE}/packaging/opensuse/nautilus-paste-shortcut.spec" nautilus-paste-shortcut.spec
-          sed -i "s/^Version:.*/Version:        ${VERSION}/" nautilus-paste-shortcut.spec
+          rm -f paste-links-*.tar.gz
+          cp "${GITHUB_WORKSPACE}/paste-links-${VERSION}.tar.gz" .
+          cp "${GITHUB_WORKSPACE}/packaging/opensuse/paste-links.spec" paste-links.spec
+          sed -i "s/^Version:.*/Version:        ${VERSION}/" paste-links.spec
 
           osc --config "${OSC_CONFIG}" addremove
           osc --config "${OSC_CONFIG}" commit -m "Update to version ${VERSION}"
@@ -671,10 +671,10 @@ jobs:
         run: |
           echo "=== DRY RUN MODE ==="
           VERSION="${{ needs.prepare-release.outputs.version }}"
-          echo "Source tarball: nautilus-paste-shortcut-${VERSION}.tar.gz"
+          echo "Source tarball: paste-links-${VERSION}.tar.gz"
           echo ""
           echo "To submit manually:"
-          echo "  osc -A https://api.opensuse.org checkout home:imz87:nautilus-paste-shortcut nautilus-paste-shortcut"
+          echo "  osc -A https://api.opensuse.org checkout home:imz87:paste-links paste-links"
           echo "  # copy files, then:"
           echo "  osc addremove && osc commit -m 'Update to ${VERSION}'"
           echo ""
@@ -725,7 +725,7 @@ jobs:
       - name: Update AUR package
         if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
         env:
-          AUR_PACKAGE: nautilus-paste-shortcut
+          AUR_PACKAGE: paste-links
         run: |
           set -euo pipefail
           VERSION="${{ needs.prepare-release.outputs.version }}"
@@ -736,7 +736,7 @@ jobs:
           cd "${AUR_DIR}"
 
           # Create source tarball URL
-          SOURCE_URL="https://github.com/imz87/nautilus-paste-shortcut/archive/refs/tags/v${VERSION}.tar.gz"
+          SOURCE_URL="https://github.com/imz87/paste-links/archive/refs/tags/v${VERSION}.tar.gz"
 
           # Generate SHA256 checksum
           SHA256=$(curl -sL "${SOURCE_URL}" | sha256sum | cut -d' ' -f1)
@@ -765,11 +765,11 @@ jobs:
         run: |
           echo "=== DRY RUN MODE ==="
           VERSION="${{ needs.prepare-release.outputs.version }}"
-          echo "AUR package: nautilus-paste-shortcut"
+          echo "AUR package: paste-links"
           echo "Version: ${VERSION}"
           echo ""
           echo "To publish manually:"
-          echo "  git clone ssh://aur@aur.archlinux.org/nautilus-paste-shortcut.git"
+          echo "  git clone ssh://aur@aur.archlinux.org/paste-links.git"
           echo "  # Update PKGBUILD with pkgver=${VERSION}"
           echo "  # makepkg --printsrcinfo > .SRCINFO"
           echo "  # git add PKGBUILD .SRCINFO && git commit -m 'Update to ${VERSION}' && git push"
@@ -807,18 +807,18 @@ jobs:
       - name: Create source tarball
         run: |
           VERSION="${{ needs.prepare-release.outputs.version }}"
-          git archive --format=tar.gz --prefix="nautilus-paste-shortcut-${VERSION}/" \
-              HEAD -o "${HOME}/rpmbuild/SOURCES/nautilus-paste-shortcut-${VERSION}.tar.gz"
+          git archive --format=tar.gz --prefix="paste-links-${VERSION}/" \
+              HEAD -o "${HOME}/rpmbuild/SOURCES/paste-links-${VERSION}.tar.gz"
 
       - name: Update spec file version
         run: |
           VERSION="${{ needs.prepare-release.outputs.version }}"
-          sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/nautilus-paste-shortcut.spec
-          cp packaging/nautilus-paste-shortcut.spec "${HOME}/rpmbuild/SPECS/"
+          sed -i "s/^Version:.*/Version:        ${VERSION}/" packaging/paste-links.spec
+          cp packaging/paste-links.spec "${HOME}/rpmbuild/SPECS/"
 
       - name: Build source RPM
         run: |
-          rpmbuild -bs "${HOME}/rpmbuild/SPECS/nautilus-paste-shortcut.spec"
+          rpmbuild -bs "${HOME}/rpmbuild/SPECS/paste-links.spec"
           SRPM=$(find "${HOME}/rpmbuild/SRPMS" -name "*.src.rpm" | head -1)
           echo "SRPM=${SRPM}" >> "$GITHUB_ENV"
           echo "Built SRPM: ${SRPM}"
@@ -847,7 +847,7 @@ jobs:
         if: github.event_name != 'workflow_dispatch' || inputs.dry_run != 'true'
         env:
           COPR_OWNER: imz87
-          COPR_PROJECT: nautilus-paste-shortcut
+          COPR_PROJECT: paste-links
         run: |
           set -euo pipefail
           echo "Submitting to COPR: ${COPR_OWNER}/${COPR_PROJECT}"
@@ -867,6 +867,6 @@ jobs:
           echo "SRPM built: ${SRPM}"
           echo ""
           echo "To submit manually:"
-          echo "  copr-cli build --chroot fedora-rawhide-x86_64 imz87/nautilus-paste-shortcut ${SRPM}"
+          echo "  copr-cli build --chroot fedora-rawhide-x86_64 imz87/paste-links ${SRPM}"
           echo ""
           echo "Or re-run this workflow with dry_run=false"

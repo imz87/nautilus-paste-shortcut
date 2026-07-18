@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: nautilus-paste-shortcut
+Upstream-Name: paste-links
 Upstream-Contact: Iman <zolfaghari19@gmail.com>
-Source: https://github.com/imz87/nautilus-paste-shortcut
+Source: https://github.com/imz87/paste-links
 
 Files: *
 Copyright: 2026 Iman <zolfaghari19@gmail.com>

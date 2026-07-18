@@ -56,7 +56,7 @@ if [ "${loader_found}" -eq 0 ]; then
 fi
 
 mkdir -p "${target_dir}"
-install -m 0644 "${script_dir}/src/nautilus_paste_shortcut.py" "${target_dir}/nautilus_paste_shortcut.py"
+install -m 0644 "${script_dir}/src/paste_links.py" "${target_dir}/paste_links.py"
 install -m 0644 "${script_dir}/src/core_logic.py" "${target_dir}/core_logic.py"
 
 printf 'Installed Nautilus extension to %s\n\n' "${target_dir}"

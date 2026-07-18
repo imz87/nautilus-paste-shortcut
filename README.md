@@ -1,18 +1,18 @@
-# Nautilus Paste Shortcut
+# Paste Links
 
-[![CI](https://github.com/imz87/nautilus-paste-shortcut/actions/workflows/ci.yml/badge.svg)](https://github.com/imz87/nautilus-paste-shortcut/actions/workflows/ci.yml)
+[![CI](https://github.com/imz87/paste-links/actions/workflows/ci.yml/badge.svg)](https://github.com/imz87/paste-links/actions/workflows/ci.yml)
 
-Add a `Paste Shortcut` action to GNOME Files on Fedora and other Nautilus-based desktops.
+Add a `Paste Symlink Here` action to GNOME Files on Fedora and other Nautilus-based desktops.
 
 The extension reads Nautilus's copied-files clipboard payload after a normal `Ctrl+C` and creates symbolic links in the folder you right-clicked.
 
 ### Quick Links
 
-- [Latest Release](https://github.com/imz87/nautilus-paste-shortcut/releases/latest)
+- [Latest Release](https://github.com/imz87/paste-links/releases/latest)
 - [Installation Guide](#install)
 - [COPR Repository (Fedora)](#copr-install-fedora)
 - [PPA Repository (Ubuntu/Debian)](#ppaapt-repository-ubuntudebian)
-- [Report a Bug](https://github.com/imz87/nautilus-paste-shortcut/issues)
+- [Report a Bug](https://github.com/imz87/paste-links/issues)
 - [Sponsor / Donate](https://github.com/sponsors/imz87)
 
 ## Features
@@ -104,7 +104,7 @@ The script installs the extension files into:
 nautilus -q
 ```
 
-Then reopen Files. The "Paste Shortcut" menu will appear in the context menu.
+Then reopen Files. The "Paste Symlink Here" menu will appear in the context menu.
 
 ### RPM Install
 
@@ -116,14 +116,14 @@ sudo dnf install rpm-build rpmdevtools
 rpmdev-setuptree
 
 # Create source tarball
-git archive --format=tar.gz --prefix=nautilus-paste-shortcut-0.1.0/ \
-    HEAD -o ~/rpmbuild/SOURCES/nautilus-paste-shortcut-0.1.0.tar.gz
+git archive --format=tar.gz --prefix=paste-links-0.1.0/ \
+    HEAD -o ~/rpmbuild/SOURCES/paste-links-0.1.0.tar.gz
 
 # Build the RPM
-rpmbuild -ba packaging/nautilus-paste-shortcut.spec
+rpmbuild -ba packaging/paste-links.spec
 
 # Install the RPM
-sudo dnf install ~/rpmbuild/RPMS/noarch/nautilus-paste-shortcut-0.1.0-1.*.rpm
+sudo dnf install ~/rpmbuild/RPMS/noarch/paste-links-0.1.0-1.*.rpm
 ```
 
 The RPM installs the extension files to the system-wide path:
@@ -138,15 +138,15 @@ The RPM installs the extension files to the system-wide path:
 nautilus -q
 ```
 
-Then reopen Files. The "Paste Shortcut" menu will appear in the context menu.
+Then reopen Files. The "Paste Symlink Here" menu will appear in the context menu.
 
 ### COPR Install (Fedora)
 
 For Fedora users, the easiest way to install is through the COPR repository:
 
 ```bash
-sudo dnf copr enable imz87/nautilus-paste-shortcut
-sudo dnf install nautilus-paste-shortcut
+sudo dnf copr enable imz87/paste-links
+sudo dnf install paste-links
 ```
 
 This provides automatic updates through `dnf`. **Restart Nautilus / GNOME Files for the extension to take effect:**
@@ -155,13 +155,13 @@ This provides automatic updates through `dnf`. **Restart Nautilus / GNOME Files 
 nautilus -q
 ```
 
-Then reopen Files. The "Paste Shortcut" menu will appear in the context menu.
+Then reopen Files. The "Paste Symlink Here" menu will appear in the context menu.
 
 **Uninstalling from COPR:**
 
 ```bash
-sudo dnf remove nautilus-paste-shortcut
-sudo dnf copr disable imz87/nautilus-paste-shortcut
+sudo dnf remove paste-links
+sudo dnf copr disable imz87/paste-links
 nautilus -q
 ```
 
@@ -170,7 +170,7 @@ nautilus -q
 Remove the RPM package:
 
 ```bash
-sudo dnf remove nautilus-paste-shortcut
+sudo dnf remove paste-links
 ```
 
 After removal, **restart Nautilus / GNOME Files so the extension is no longer loaded:**
@@ -195,29 +195,29 @@ GitHub Releases provide pre-built packages for multiple distributions. These are
 
 Fedora/RHEL:
 ```bash
-sudo dnf install ./nautilus-paste-shortcut-*.rpm
+sudo dnf install ./paste-links-*.rpm
 ```
 
 Ubuntu/Debian:
 ```bash
-sudo apt install ./nautilus-paste-shortcut_*.deb
+sudo apt install ./paste-links_*.deb
 ```
 
 Arch Linux:
 ```bash
-sudo pacman -U nautilus-paste-shortcut-*.pkg.tar.zst
+sudo pacman -U paste-links-*.pkg.tar.zst
 ```
 
 openSUSE:
 ```bash
-sudo zypper install ./nautilus-paste-shortcut-*.rpm
+sudo zypper install ./paste-links-*.rpm
 ```
 
 After installation, **restart Nautilus / GNOME Files for the extension to take effect:**
 ```bash
 nautilus -q
 ```
-Then reopen Files. The "Paste Shortcut" menu will appear in the context menu.
+Then reopen Files. The "Paste Symlink Here" menu will appear in the context menu.
 
 **Important:** Release artifacts are not the same as adding an apt/dnf/pacman/zypper repository. They do not provide automatic updates. You must download and install new versions manually from GitHub Releases.
 
@@ -231,27 +231,27 @@ Download both the package and its `.asc` signature file, then verify:
 
 Fedora/RHEL:
 ```bash
-rpm --import nautilus-paste-shortcut-signing-key.asc
-rpm --checksig nautilus-paste-shortcut-*.rpm
+rpm --import paste-links-signing-key.asc
+rpm --checksig paste-links-*.rpm
 ```
 
 Ubuntu/Debian:
 ```bash
-gpg --verify nautilus-paste-shortcut_*.deb.asc nautilus-paste-shortcut_*.deb
+gpg --verify paste-links_*.deb.asc paste-links_*.deb
 ```
 
 Arch Linux:
 ```bash
-gpg --verify nautilus-paste-shortcut-*.pkg.tar.zst.asc nautilus-paste-shortcut-*.pkg.tar.zst
+gpg --verify paste-links-*.pkg.tar.zst.asc paste-links-*.pkg.tar.zst
 ```
 
 openSUSE:
 ```bash
-rpm --import nautilus-paste-shortcut-signing-key.asc
-rpm --checksig nautilus-paste-shortcut-*.rpm
+rpm --import paste-links-signing-key.asc
+rpm --checksig paste-links-*.rpm
 ```
 
-**Signing key identity:** `Nautilus Paste Shortcut Release Signing <zolfaghari19@gmail.com>`
+**Signing key identity:** `Paste Links Release Signing <zolfaghari19@gmail.com>`
 
 See `.docs/project/packaging.md` for details on the signing strategy and key management.
 
@@ -262,22 +262,22 @@ For Ubuntu and Debian users, the extension is available through a PPA repository
 **Installation from PPA:**
 
 ```bash
-sudo add-apt-repository ppa:imz87/nautilus-paste-shortcut
+sudo add-apt-repository ppa:imz87/paste-links
 sudo apt update
-sudo apt install nautilus-paste-shortcut
+sudo apt install paste-links
 ```
 
 After installation, **restart Nautilus / GNOME Files for the extension to take effect:**
 ```bash
 nautilus -q
 ```
-Then reopen Files. The "Paste Shortcut" menu will appear in the context menu.
+Then reopen Files. The "Paste Symlink Here" menu will appear in the context menu.
 
 **Uninstalling from PPA:**
 
 ```bash
-sudo apt remove nautilus-paste-shortcut
-sudo add-apt-repository --remove ppa:imz87/nautilus-paste-shortcut
+sudo apt remove paste-links
+sudo add-apt-repository --remove ppa:imz87/paste-links
 nautilus -q
 ```
 
@@ -291,7 +291,7 @@ See `.docs/project/packaging.md` for details on PPA publishing and maintenance.
 2. Press `Ctrl+C`.
 3. Navigate to another local folder.
 4. Right-click empty space.
-5. Choose `Paste Shortcut` (only visible when the clipboard contains copied files).
+5. Choose `Paste Symlink Here` (only visible when the clipboard contains copied files).
 
 If the clipboard does not contain copied local files, the menu item is hidden. An error dialog may still appear as a fallback if clipboard inspection fails.
 
@@ -300,7 +300,7 @@ If the clipboard does not contain copied local files, the menu item is hidden. A
 Remove the installed extension files and restart Nautilus / GNOME Files:
 
 ```bash
-rm ~/.local/share/nautilus-python/extensions/nautilus_paste_shortcut.py \
+rm ~/.local/share/nautilus-python/extensions/paste_links.py \
    ~/.local/share/nautilus-python/extensions/core_logic.py
 nautilus -q
 ```
@@ -308,10 +308,10 @@ nautilus -q
 ## Development
 
 - Source files:
-  - `src/nautilus_paste_shortcut.py` - Nautilus/GTK integration entrypoint
-  - `src/core_logic.py` - Pure shortcut logic (testable without GTK/GDK/Nautilus)
+  - `src/paste_links.py` - Nautilus/GTK integration entrypoint
+  - `src/core_logic.py` - Pure symlink logic (testable without GTK/GDK/Nautilus)
 - Installer: `install.sh`
-- RPM packaging: `packaging/nautilus-paste-shortcut.spec`
+- RPM packaging: `packaging/paste-links.spec`
 - Project docs: `.docs/`
 
 ## Testing
@@ -332,8 +332,8 @@ The tests do **not** require a live GNOME session, Nautilus, or clipboard access
 
 ## Manual Verification
 
-1. Copy one local file and paste a shortcut into another folder.
-2. Copy one local folder and paste a shortcut into another folder.
+1. Copy one local file and paste a symlink into another folder.
+2. Copy one local folder and paste a symlink into another folder.
 3. Copy multiple local items and verify one symlink is created per item.
 4. Repeat with a conflicting destination name and verify `-link` suffixes are used.
 5. Press `Ctrl+X` instead of `Ctrl+C` and verify the menu item is hidden.
@@ -343,7 +343,7 @@ The tests do **not** require a live GNOME session, Nautilus, or clipboard access
 
 ### Menu item does not appear
 
-If the extension files are installed but `Paste Shortcut` does not appear in the context menu:
+If the extension files are installed but `Paste Symlink Here` does not appear in the context menu:
 
 1. **Check the loader is installed.** The `nautilus-python` package provides the shared library that lets Nautilus load Python extensions. Run:
    ```bash
@@ -370,8 +370,8 @@ On some Nautilus/Wayland setups, the native clipboard transfer API can crash. Th
 If you find this project useful, consider supporting its development:
 
 - [GitHub Sponsors](https://github.com/sponsors/imz87)
-- [Open an Issue](https://github.com/imz87/nautilus-paste-shortcut/issues) for bugs or feature requests
-- [Contribute](https://github.com/imz87/nautilus-paste-shortcut/pulls) with a pull request
+- [Open an Issue](https://github.com/imz87/paste-links/issues) for bugs or feature requests
+- [Contribute](https://github.com/imz87/paste-links/pulls) with a pull request
 
 Your support helps with:
 - Maintaining and improving the extension

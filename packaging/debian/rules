@@ -4,6 +4,6 @@
 	dh $@
 
 override_dh_auto_install:
-	mkdir -p debian/nautilus-paste-shortcut/usr/share/nautilus-python/extensions
-	install -m 0644 src/nautilus_paste_shortcut.py debian/nautilus-paste-shortcut/usr/share/nautilus-python/extensions/
-	install -m 0644 src/core_logic.py debian/nautilus-paste-shortcut/usr/share/nautilus-python/extensions/
+	mkdir -p debian/paste-links/usr/share/nautilus-python/extensions
+	install -m 0644 src/paste_links.py debian/paste-links/usr/share/nautilus-python/extensions/
+	install -m 0644 src/core_logic.py debian/paste-links/usr/share/nautilus-python/extensions/

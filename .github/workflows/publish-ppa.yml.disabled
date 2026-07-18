@@ -102,7 +102,7 @@ jobs:
         run: |
           SERIES="${{ inputs.target_series || 'noble' }}"
           echo "Publishing to PPA for series: $SERIES"
-          dput ppa artifacts/source-package/nautilus-paste-shortcut_*.changes
+          dput ppa artifacts/source-package/paste-links_*.changes
 
       - name: Verify publication
         if: inputs.dry_run != 'true'
@@ -112,4 +112,4 @@ jobs:
           echo "Users can now install with:"
           echo "  sudo add-apt-repository ppa:${{ secrets.PPA_LAUNCHPAD_USERNAME }}/ppa"
           echo "  sudo apt update"
-          echo "  sudo apt install nautilus-paste-shortcut"
+          echo "  sudo apt install paste-links"
