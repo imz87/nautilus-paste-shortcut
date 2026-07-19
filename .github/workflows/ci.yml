@@ -651,7 +651,6 @@ jobs:
           mkdir -p "${WORK_DIR}"
           cd "${WORK_DIR}"
 
-          osc --config "${OSC_CONFIG}" -A https://api.opensuse.org rmkpac "${OBS_PROJECT}" "${OBS_PACKAGE}" 2>/dev/null || true
           osc --config "${OSC_CONFIG}" -A https://api.opensuse.org checkout "${OBS_PROJECT}" "${OBS_PACKAGE}"
           cd "${OBS_PROJECT}/${OBS_PACKAGE}"
 
@@ -683,8 +682,7 @@ jobs:
   publish-aur:
     name: Publish to AUR (Arch)
     needs: [prepare-release, create-tag, release]
-    # Temporarily disabled until the AUR account/package is ready.
-    if: false
+    if: needs.prepare-release.outputs.should_release == 'true' && needs.prepare-release.outputs.is_release_branch == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
