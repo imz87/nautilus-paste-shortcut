@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, fix/resolve-ci-arch]
   pull_request:
     branches: [main, master]
   workflow_dispatch:
@@ -131,12 +131,16 @@ jobs:
           SHOULD_RELEASE=false
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             SHOULD_RELEASE=true
+          elif [ "${GITHUB_REF}" = "refs/heads/fix/resolve-ci-arch" ]; then
+            # Temporary: run the complete release pipeline on this CI-fix branch.
+            SHOULD_RELEASE=true
           elif git diff --name-only HEAD~1 HEAD | grep -q '^VERSION$'; then
             SHOULD_RELEASE=true
           fi
 
           IS_RELEASE_BRANCH=false
-          if [ "${GITHUB_REF}" = "refs/heads/main" ] || [ "${GITHUB_REF}" = "refs/heads/master" ]; then
+          if [ "${GITHUB_REF}" = "refs/heads/main" ] || [ "${GITHUB_REF}" = "refs/heads/master" ] || [ "${GITHUB_REF}" = "refs/heads/fix/resolve-ci-arch" ]; then
+            # Temporary: allow release/publish jobs to run from this CI-fix branch.
             IS_RELEASE_BRANCH=true
           fi
 
