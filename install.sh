@@ -1,8 +1,49 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+usage() {
+    printf 'Usage: %s [--install | --uninstall]\n\n' "$(basename "$0")"
+    printf 'Install or uninstall the Paste Links extension.\n\n'
+    printf '  --install      Install the extension (default)\n'
+    printf '  --uninstall    Remove the extension and restart Nautilus\n'
+}
+
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 target_dir="${HOME}/.local/share/nautilus-python/extensions"
+extension_files=("paste_links.py" "core_logic.py")
+
+# --- Parse arguments ---
+action="install"
+if [[ $# -gt 0 ]]; then
+    case "$1" in
+        --install)   action="install" ;;
+        --uninstall) action="uninstall" ;;
+        --help|-h)   usage; exit 0 ;;
+        *)           printf 'Unknown option: %s\n\n' "$1" >&2; usage >&2; exit 1 ;;
+    esac
+fi
+
+# --- Uninstall mode ---
+if [[ "${action}" == "uninstall" ]]; then
+    removed=0
+    for file in "${extension_files[@]}"; do
+        if [[ -f "${target_dir}/${file}" ]]; then
+            rm "${target_dir}/${file}"
+            printf 'Removed %s\n' "${target_dir}/${file}"
+            removed=1
+        fi
+    done
+
+    if [[ "${removed}" -eq 0 ]]; then
+        printf 'Nothing to remove. Extension is not installed.\n'
+        exit 0
+    fi
+
+    printf '\nRestart Nautilus / GNOME Files for the change to take effect:\n\n'
+    printf '  nautilus -q\n\n'
+    printf 'Then reopen Files. The "Paste Symlink" menu will no longer appear.\n'
+    exit 0
+fi
 
 # --- Preflight: check for the Nautilus Python extension loader ---
 # The nautilus-python package provides a shared library that tells
